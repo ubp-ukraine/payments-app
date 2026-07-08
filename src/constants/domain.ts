@@ -1,5 +1,5 @@
-import { Wallet, Landmark, Users, type LucideIcon } from 'lucide-react';
-import { PaymentStatus, UserRole } from '../types/database';
+import { Wallet, BookOpen, Users, type LucideIcon } from 'lucide-react';
+import { Importance, PaymentStatus, UserRole } from '../types/database';
 
 export const ROLE_LABELS: Record<UserRole, string> = {
   zamovnyk: 'Замовник',
@@ -40,7 +40,15 @@ export const STATUS_META: Record<PaymentStatus, StatusMeta> = {
   },
 };
 
-export const PAYMENT_FORMS = ['Безготівка', 'Готівка', 'Картка'] as const;
+export const IMPORTANCE_OPTIONS: { value: Importance; label: string; className: string }[] = [
+  { value: 'urgent', label: 'Терміново', className: 'bg-red-50 text-red-700 border-red-200' },
+  { value: 'planned', label: 'Планова', className: 'bg-gray-100 text-gray-600 border-gray-200' },
+];
+
+export const IMPORTANCE_LABELS: Record<Importance, string> = {
+  urgent: 'Терміново',
+  planned: 'Планова',
+};
 
 export function formatUAH(amount: number): string {
   return new Intl.NumberFormat('uk-UA', {
@@ -57,7 +65,7 @@ export function formatDate(value: string | null): string {
 }
 
 /** Views the app can show, gated by role. */
-export type View = 'payments' | 'banks' | 'users';
+export type View = 'payments' | 'directories' | 'users';
 
 export interface NavItem {
   view: View;
@@ -68,7 +76,7 @@ export interface NavItem {
 
 export const NAV: NavItem[] = [
   { view: 'payments', label: 'Оплати', icon: Wallet, roles: ['zamovnyk', 'buhgalter', 'admin', 'fin_director'] },
-  { view: 'banks', label: 'Банки', icon: Landmark, roles: ['admin'] },
+  { view: 'directories', label: 'Довідники', icon: BookOpen, roles: ['admin'] },
   { view: 'users', label: 'Користувачі', icon: Users, roles: ['admin'] },
 ];
 

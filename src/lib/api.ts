@@ -1,8 +1,10 @@
 import { supabase } from './supabase';
 import {
-  Bank,
+  DirectoryRow,
+  Importance,
   Payment,
   PaymentAllocation,
+  PaymentAttachment,
   PaymentComment,
   PaymentStatus,
   User,
@@ -29,32 +31,41 @@ export async function updateUserRole(id: string, role: UserRole): Promise<void> 
   if (error) throw error;
 }
 
-// ── Banks ────────────────────────────────────────────────────────────────────
-export async function listBanks(activeOnly = false): Promise<Bank[]> {
-  let query = supabase.from('banks').select('*').order('created_at', { ascending: true });
+// ── Directories (banks / payer_companies / payment_forms) ────────────────────
+export type DirTable = 'banks' | 'payer_companies' | 'payment_forms';
+
+export async function listDir(table: DirTable, activeOnly = false): Promise<DirectoryRow[]> {
+  let query = supabase.from(table).select('id, name, is_active, created_at').order('created_at', {
+    ascending: true,
+  });
   if (activeOnly) query = query.eq('is_active', true);
   const { data, error } = await query;
   if (error) throw error;
-  return data ?? [];
+  return (data as DirectoryRow[]) ?? [];
 }
 
-export async function createBank(name: string, accountNo: string | null): Promise<void> {
-  const { error } = await supabase.from('banks').insert({ name, account_no: accountNo });
+export async function dirMap(table: DirTable): Promise<Record<string, DirectoryRow>> {
+  const rows = await listDir(table);
+  return Object.fromEntries(rows.map((r) => [r.id, r]));
+}
+
+export async function createDir(table: DirTable, name: string): Promise<void> {
+  const { error } = await supabase.from(table).insert({ name });
   if (error) throw error;
 }
 
-export async function updateBank(id: string, patch: Partial<Bank>): Promise<void> {
-  const { error } = await supabase.from('banks').update(patch).eq('id', id);
+export async function toggleDir(table: DirTable, id: string, isActive: boolean): Promise<void> {
+  const { error } = await supabase.from(table).update({ is_active: isActive }).eq('id', id);
   if (error) throw error;
 }
 
 // ── Payments ─────────────────────────────────────────────────────────────────
 export interface NewPaymentInput {
-  recipient: string;
   amount: number;
-  payment_form: string;
-  pay_date: string | null;
-  purpose: string | null;
+  payer_company_id: string | null;
+  payment_form_id: string | null;
+  importance: Importance | null;
+  purpose: string;
 }
 
 export async function listPayments(status?: PaymentStatus): Promise<Payment[]> {
@@ -65,27 +76,22 @@ export async function listPayments(status?: PaymentStatus): Promise<Payment[]> {
   return data ?? [];
 }
 
-export async function listMyPayments(userId: string): Promise<Payment[]> {
+export async function createPayment(authorId: string, input: NewPaymentInput): Promise<string> {
   const { data, error } = await supabase
     .from('payments')
-    .select('*')
-    .eq('author_id', userId)
-    .order('created_at', { ascending: false });
+    .insert({
+      author_id: authorId,
+      amount: input.amount,
+      payer_company_id: input.payer_company_id,
+      payment_form_id: input.payment_form_id,
+      importance: input.importance,
+      purpose: input.purpose,
+      status: 'pending',
+    })
+    .select('id')
+    .single();
   if (error) throw error;
-  return data ?? [];
-}
-
-export async function createPayment(authorId: string, input: NewPaymentInput): Promise<void> {
-  const { error } = await supabase.from('payments').insert({
-    author_id: authorId,
-    recipient: input.recipient,
-    amount: input.amount,
-    payment_form: input.payment_form,
-    pay_date: input.pay_date,
-    purpose: input.purpose,
-    status: 'pending',
-  });
-  if (error) throw error;
+  return (data as { id: string }).id;
 }
 
 export async function approvePayment(id: string): Promise<void> {
@@ -109,7 +115,6 @@ export interface AllocationInput {
   amount: number;
 }
 
-/** Split the payment across banks, then mark it paid. */
 export async function payPayment(id: string, allocations: AllocationInput[]): Promise<void> {
   const rows = allocations
     .filter((a) => a.amount > 0)
@@ -122,7 +127,7 @@ export async function payPayment(id: string, allocations: AllocationInput[]): Pr
   if (error) throw error;
 }
 
-// ── Allocations & comments ───────────────────────────────────────────────────
+// ── Allocations, comments, attachments ───────────────────────────────────────
 export async function listAllocations(paymentId: string): Promise<PaymentAllocation[]> {
   const { data, error } = await supabase
     .from('payment_allocations')
@@ -147,4 +152,33 @@ export async function addComment(paymentId: string, authorId: string, text: stri
     .from('payment_comments')
     .insert({ payment_id: paymentId, author_id: authorId, text });
   if (error) throw error;
+}
+
+const BUCKET = 'payment-files';
+
+export async function uploadAttachment(paymentId: string, file: File): Promise<void> {
+  const safe = file.name.replace(/[^\w.\-()]+/g, '_');
+  const path = `${paymentId}/${Date.now()}_${safe}`;
+  const { error } = await supabase.storage.from(BUCKET).upload(path, file);
+  if (error) throw error;
+  const { error: e2 } = await supabase
+    .from('payment_attachments')
+    .insert({ payment_id: paymentId, path, name: file.name });
+  if (e2) throw e2;
+}
+
+export async function listAttachments(paymentId: string): Promise<PaymentAttachment[]> {
+  const { data, error } = await supabase
+    .from('payment_attachments')
+    .select('*')
+    .eq('payment_id', paymentId)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function attachmentUrl(path: string): Promise<string> {
+  const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(path, 600);
+  if (error) throw error;
+  return data.signedUrl;
 }

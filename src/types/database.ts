@@ -2,6 +2,23 @@ export type UserRole = 'zamovnyk' | 'buhgalter' | 'admin' | 'fin_director';
 
 export type PaymentStatus = 'pending' | 'approved' | 'paid' | 'rejected';
 
+export type Importance = 'urgent' | 'planned';
+
+export interface DirectoryRow {
+  id: string;
+  name: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface PaymentAttachment {
+  id: string;
+  payment_id: string;
+  path: string;
+  name: string | null;
+  created_at: string;
+}
+
 export interface User {
   id: string;
   email: string;
@@ -21,9 +38,12 @@ export interface Bank {
 export interface Payment {
   id: string;
   author_id: string;
-  recipient: string;
+  recipient: string | null;
   amount: number;
-  payment_form: string;
+  payment_form: string | null;
+  payer_company_id: string | null;
+  payment_form_id: string | null;
+  importance: Importance | null;
   pay_date: string | null;
   purpose: string | null;
   status: PaymentStatus;

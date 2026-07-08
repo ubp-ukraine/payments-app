@@ -1,7 +1,9 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
+import { Upload, X } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { createPayment } from '../../lib/api';
-import { PAYMENT_FORMS } from '../../constants/domain';
+import { addComment, createPayment, listDir, uploadAttachment } from '../../lib/api';
+import { DirectoryRow, Importance } from '../../types/database';
+import { IMPORTANCE_OPTIONS } from '../../constants/domain';
 import { Modal } from '../ui/Modal';
 
 const inputCls =
@@ -10,31 +12,57 @@ const labelCls = 'block text-sm font-medium text-gray-700 mb-1';
 
 export function NewPaymentModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const { user } = useAuth();
-  const [recipient, setRecipient] = useState('');
+  const [companies, setCompanies] = useState<DirectoryRow[]>([]);
+  const [forms, setForms] = useState<DirectoryRow[]>([]);
+
   const [amount, setAmount] = useState('');
-  const [paymentForm, setPaymentForm] = useState<string>(PAYMENT_FORMS[0]);
-  const [payDate, setPayDate] = useState('');
+  const [companyId, setCompanyId] = useState('');
+  const [formId, setFormId] = useState('');
+  const [importance, setImportance] = useState<Importance | ''>('');
   const [purpose, setPurpose] = useState('');
+  const [comment, setComment] = useState('');
+  const [files, setFiles] = useState<File[]>([]);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const [c, f] = await Promise.all([listDir('payer_companies', true), listDir('payment_forms', true)]);
+      setCompanies(c);
+      setForms(f);
+    })();
+  }, []);
+
+  const addFiles = (list: FileList | null) => {
+    if (list) setFiles((prev) => [...prev, ...Array.from(list)]);
+  };
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
     const amt = Number(amount.replace(',', '.'));
-    if (!recipient.trim()) return setError('Вкажіть отримувача');
     if (!Number.isFinite(amt) || amt <= 0) return setError('Сума має бути більшою за нуль');
+    if (!companyId) return setError('Оберіть підприємство-платника');
+    if (!formId) return setError('Оберіть форму оплати');
+    if (!importance) return setError('Оберіть важливість');
+    if (!purpose.trim()) return setError('Вкажіть, за що оплата');
     if (!user) return;
 
     setSaving(true);
     try {
-      await createPayment(user.id, {
-        recipient: recipient.trim(),
+      const id = await createPayment(user.id, {
         amount: amt,
-        payment_form: paymentForm,
-        pay_date: payDate || null,
-        purpose: purpose.trim() || null,
+        payer_company_id: companyId,
+        payment_form_id: formId,
+        importance,
+        purpose: purpose.trim(),
       });
+      for (const file of files) {
+        await uploadAttachment(id, file);
+      }
+      if (comment.trim()) {
+        await addComment(id, user.id, comment.trim());
+      }
       onCreated();
     } catch (err) {
       setError((err as Error).message || 'Не вдалося створити заявку');
@@ -44,58 +72,112 @@ export function NewPaymentModal({ onClose, onCreated }: { onClose: () => void; o
   };
 
   return (
-    <Modal title="Нова заявка на оплату" onClose={onClose}>
+    <Modal title="Рахунок на оплату" onClose={onClose}>
       <form onSubmit={submit} className="space-y-4">
         {error && (
           <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm">{error}</div>
         )}
+
+        <div>
+          <label className={labelCls}>Сума, ₴ *</label>
+          <input
+            className={inputCls}
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            inputMode="decimal"
+            placeholder="Введіть цифру"
+            autoFocus
+          />
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="sm:col-span-2">
-            <label className={labelCls}>Отримувач</label>
-            <input
-              className={inputCls}
-              value={recipient}
-              onChange={(e) => setRecipient(e.target.value)}
-              placeholder="Контрагент / кому платимо"
-              autoFocus
-            />
-          </div>
           <div>
-            <label className={labelCls}>Сума, ₴</label>
-            <input
-              className={inputCls}
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              inputMode="decimal"
-              placeholder="0,00"
-            />
-          </div>
-          <div>
-            <label className={labelCls}>Форма оплати</label>
-            <select className={inputCls} value={paymentForm} onChange={(e) => setPaymentForm(e.target.value)}>
-              {PAYMENT_FORMS.map((f) => (
-                <option key={f} value={f}>
-                  {f}
+            <label className={labelCls}>Підприємство, звідки оплата *</label>
+            <select className={inputCls} value={companyId} onChange={(e) => setCompanyId(e.target.value)}>
+              <option value="">Оберіть…</option>
+              {companies.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
                 </option>
               ))}
             </select>
           </div>
           <div>
-            <label className={labelCls}>Дата оплати</label>
-            <input type="date" className={inputCls} value={payDate} onChange={(e) => setPayDate(e.target.value)} />
-          </div>
-          <div className="sm:col-span-2">
-            <label className={labelCls}>Призначення платежу</label>
-            <textarea
-              className={inputCls}
-              rows={3}
-              value={purpose}
-              onChange={(e) => setPurpose(e.target.value)}
-              placeholder="За що платимо"
-            />
+            <label className={labelCls}>Форма оплати *</label>
+            <select className={inputCls} value={formId} onChange={(e) => setFormId(e.target.value)}>
+              <option value="">Оберіть…</option>
+              {forms.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
-        <div className="flex gap-2 justify-end">
+
+        <div>
+          <label className={labelCls}>Важливість оплати *</label>
+          <select
+            className={inputCls}
+            value={importance}
+            onChange={(e) => setImportance(e.target.value as Importance | '')}
+          >
+            <option value="">Оберіть…</option>
+            {IMPORTANCE_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className={labelCls}>Файл або фото</label>
+          <label className="flex flex-col items-center justify-center gap-1 border-2 border-dashed border-gray-300 rounded-lg py-5 cursor-pointer hover:border-brand-400">
+            <Upload size={18} className="text-gray-400" />
+            <span className="text-sm text-gray-600">Оберіть файли…</span>
+            <input type="file" multiple className="hidden" onChange={(e) => addFiles(e.target.files)} />
+          </label>
+          {files.length > 0 && (
+            <div className="mt-2 space-y-1">
+              {files.map((f, i) => (
+                <div key={i} className="flex items-center gap-2 text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5">
+                  <span className="flex-1 truncate">{f.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => setFiles((prev) => prev.filter((_, idx) => idx !== i))}
+                    className="text-gray-400 hover:text-red-600"
+                    aria-label="Прибрати"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div>
+          <label className={labelCls}>За що оплата, короткий опис *</label>
+          <input
+            className={inputCls}
+            value={purpose}
+            onChange={(e) => setPurpose(e.target.value)}
+            placeholder="Введіть відповідь"
+          />
+        </div>
+
+        <div>
+          <label className={labelCls}>Коментар</label>
+          <input
+            className={inputCls}
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            placeholder="Необовʼязково"
+          />
+        </div>
+
+        <div className="flex gap-2 justify-end pt-1">
           <button
             type="button"
             onClick={onClose}
@@ -108,7 +190,7 @@ export function NewPaymentModal({ onClose, onCreated }: { onClose: () => void; o
             disabled={saving}
             className="px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-medium hover:bg-brand-700 disabled:opacity-60"
           >
-            {saving ? 'Відправка...' : 'Подати на погодження'}
+            {saving ? 'Відправка...' : 'Відправити'}
           </button>
         </div>
       </form>

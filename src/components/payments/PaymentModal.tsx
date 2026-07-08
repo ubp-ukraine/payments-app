@@ -1,27 +1,39 @@
 import { useEffect, useState } from 'react';
+import { Paperclip } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { Bank, Payment, PaymentAllocation, PaymentComment, User } from '../../types/database';
+import {
+  DirectoryRow,
+  Payment,
+  PaymentAllocation,
+  PaymentAttachment,
+  PaymentComment,
+  User,
+} from '../../types/database';
 import {
   approvePayment,
+  attachmentUrl,
   listAllocations,
-  listBanks,
+  listAttachments,
   listComments,
+  listDir,
   payPayment,
   rejectPayment,
   resubmitPayment,
 } from '../../lib/api';
-import { formatDate, formatUAH } from '../../constants/domain';
+import { formatUAH, IMPORTANCE_LABELS } from '../../constants/domain';
 import { Modal } from '../ui/Modal';
 import { StatusPill } from '../ui/StatusPill';
 
 interface Props {
   payment: Payment;
   users: Record<string, User>;
+  companies: Record<string, DirectoryRow>;
+  forms: Record<string, DirectoryRow>;
   onClose: () => void;
   onChanged: () => void;
 }
 
-export function PaymentModal({ payment, users, onClose, onChanged }: Props) {
+export function PaymentModal({ payment, users, companies, forms, onClose, onChanged }: Props) {
   const { user, profile } = useAuth();
   const role = profile?.role;
   const canApprove = role === 'admin' || role === 'fin_director';
@@ -30,7 +42,8 @@ export function PaymentModal({ payment, users, onClose, onChanged }: Props) {
 
   const [comments, setComments] = useState<PaymentComment[]>([]);
   const [allocations, setAllocations] = useState<PaymentAllocation[]>([]);
-  const [banks, setBanks] = useState<Bank[]>([]);
+  const [attachments, setAttachments] = useState<PaymentAttachment[]>([]);
+  const [banks, setBanks] = useState<DirectoryRow[]>([]);
   const [alloc, setAlloc] = useState<Record<string, string>>({});
   const [rejectComment, setRejectComment] = useState('');
   const [busy, setBusy] = useState(false);
@@ -38,15 +51,31 @@ export function PaymentModal({ payment, users, onClose, onChanged }: Props) {
 
   useEffect(() => {
     (async () => {
-      const [c, a] = await Promise.all([listComments(payment.id), listAllocations(payment.id)]);
+      const [c, a, at] = await Promise.all([
+        listComments(payment.id),
+        listAllocations(payment.id),
+        listAttachments(payment.id),
+      ]);
       setComments(c);
       setAllocations(a);
-      if (payment.status === 'approved' && canPay) setBanks(await listBanks(true));
+      setAttachments(at);
+      if (payment.status === 'approved' && canPay) setBanks(await listDir('banks', true));
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [payment.id]);
 
   const name = (id: string | null) => (id ? users[id]?.full_name || users[id]?.email || '—' : '—');
+  const companyName = payment.payer_company_id ? companies[payment.payer_company_id]?.name ?? '—' : '—';
+  const formName = payment.payment_form_id ? forms[payment.payment_form_id]?.name ?? '—' : payment.payment_form ?? '—';
+
+  const openFile = async (path: string) => {
+    try {
+      const url = await attachmentUrl(path);
+      window.open(url, '_blank', 'noopener');
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  };
 
   const run = async (fn: () => Promise<void>) => {
     setBusy(true);
@@ -83,7 +112,7 @@ export function PaymentModal({ payment, users, onClose, onChanged }: Props) {
   };
 
   return (
-    <Modal title={payment.recipient} onClose={onClose}>
+    <Modal title={payment.purpose || 'Заявка на оплату'} onClose={onClose}>
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <StatusPill status={payment.status} />
@@ -92,24 +121,24 @@ export function PaymentModal({ payment, users, onClose, onChanged }: Props) {
 
         <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
           <div>
-            <dt className="text-gray-400 text-xs">Замовник</dt>
-            <dd className="text-gray-900">{name(payment.author_id)}</dd>
+            <dt className="text-gray-400 text-xs">Підприємство-платник</dt>
+            <dd className="text-gray-900">{companyName}</dd>
           </div>
           <div>
             <dt className="text-gray-400 text-xs">Форма оплати</dt>
-            <dd className="text-gray-900">{payment.payment_form}</dd>
+            <dd className="text-gray-900">{formName}</dd>
           </div>
           <div>
-            <dt className="text-gray-400 text-xs">Дата оплати</dt>
-            <dd className="text-gray-900">{formatDate(payment.pay_date)}</dd>
+            <dt className="text-gray-400 text-xs">Важливість</dt>
+            <dd className="text-gray-900">{payment.importance ? IMPORTANCE_LABELS[payment.importance] : '—'}</dd>
           </div>
           <div>
-            <dt className="text-gray-400 text-xs">Створено</dt>
-            <dd className="text-gray-900">{formatDate(payment.created_at)}</dd>
+            <dt className="text-gray-400 text-xs">Замовник</dt>
+            <dd className="text-gray-900">{name(payment.author_id)}</dd>
           </div>
           {payment.purpose && (
             <div className="col-span-2">
-              <dt className="text-gray-400 text-xs">Призначення</dt>
+              <dt className="text-gray-400 text-xs">За що оплата</dt>
               <dd className="text-gray-900">{payment.purpose}</dd>
             </div>
           )}
@@ -127,7 +156,24 @@ export function PaymentModal({ payment, users, onClose, onChanged }: Props) {
           )}
         </dl>
 
-        {/* Allocations for paid */}
+        {attachments.length > 0 && (
+          <div className="border-t border-gray-100 pt-3">
+            <div className="text-xs text-gray-400 mb-2">Вкладення</div>
+            <div className="flex flex-wrap gap-2">
+              {attachments.map((a) => (
+                <button
+                  key={a.id}
+                  onClick={() => openFile(a.path)}
+                  className="inline-flex items-center gap-1.5 text-xs bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 text-brand-700 hover:bg-gray-100"
+                >
+                  <Paperclip size={13} />
+                  <span className="max-w-[200px] truncate">{a.name || 'Файл'}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {payment.status === 'paid' && allocations.length > 0 && (
           <div className="border-t border-gray-100 pt-3">
             <div className="text-xs text-gray-400 mb-2">Розбивка по банках</div>
@@ -142,16 +188,13 @@ export function PaymentModal({ payment, users, onClose, onChanged }: Props) {
           </div>
         )}
 
-        {/* Comments */}
         {comments.length > 0 && (
           <div className="border-t border-gray-100 pt-3 space-y-2">
             <div className="text-xs text-gray-400">Коментарі</div>
             {comments.map((c) => (
               <div key={c.id} className="text-sm bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
                 <div className="text-gray-800">{c.text}</div>
-                <div className="text-[11px] text-gray-400 mt-1">
-                  {name(c.author_id)} · {formatDate(c.created_at)}
-                </div>
+                <div className="text-[11px] text-gray-400 mt-1">{name(c.author_id)}</div>
               </div>
             ))}
           </div>
@@ -159,7 +202,6 @@ export function PaymentModal({ payment, users, onClose, onChanged }: Props) {
 
         {error && <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm">{error}</div>}
 
-        {/* Actions */}
         {payment.status === 'pending' && canApprove && (
           <div className="border-t border-gray-100 pt-4 space-y-2">
             <input
@@ -203,6 +245,9 @@ export function PaymentModal({ payment, users, onClose, onChanged }: Props) {
                   />
                 </div>
               ))}
+              {banks.length === 0 && (
+                <div className="text-sm text-gray-400">Немає активних банків. Додайте у «Довідники».</div>
+              )}
             </div>
             <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
               <span className={`text-sm font-medium ${allocMatch ? 'text-green-700' : 'text-gray-500'}`}>
