@@ -24,8 +24,12 @@ port = 48000
 schemas = ["public", "graphql_public"]
 extra_search_path = ["public", "extensions"]
 max_rows = 1000
-# Публічний HTTPS URL API (Kong за Cloudflare Tunnel). ЗАМІНИ на реальний домен.
-external_url = "https://api.oplaty.example.com"
+# Публічний HTTPS URL API (Kong за Cloudflare Tunnel).
+# УВАГА: розкоментуй і встав РЕАЛЬНИЙ домен ЛИШЕ ПІСЛЯ того, як налаштуєш тунель і DNS
+# (домен має резолвитись!). Інакше `supabase start` впаде на health-check:
+#   Head "https://.../rest-admin/v1/ready": ... no such host
+# Поки домену немає — тримай закоментованим, тоді health-check піде на 127.0.0.1:48000.
+# external_url = "https://api.oplaty.example.com"
 
 [api.tls]
 enabled = false
@@ -89,8 +93,9 @@ additional_redirect_urls = [
   "https://oplaty.example.com",
 ]
 jwt_expiry = 3600
-# ЗАМІНИ домен: інакше посилання recovery/verify будуть на 127.0.0.1.
-jwt_issuer = "https://api.oplaty.example.com/auth/v1"
+# Розкоментуй РАЗОМ з external_url, коли буде реальний домен за тунелем.
+# Поки закоментовано — issuer за замовчуванням локальний (для тесту логіну ок).
+# jwt_issuer = "https://api.oplaty.example.com/auth/v1"
 enable_refresh_token_rotation = true
 refresh_token_reuse_interval = 10
 enable_signup = true

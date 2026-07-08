@@ -37,14 +37,19 @@ cd payments-app
 
 (Docker і Node вже стоять на VM з часів основного проєкту. Перевір: `docker ps`, `node -v`.)
 
-## 2. Прописати реальний домен у config.toml
+## 2. Домен у config.toml — ПІЗНІШЕ (важливо про порядок!)
 
-Відредагуй [`supabase/config.toml`](../supabase/config.toml) — заміни плейсхолдери:
+**НЕ прописуй публічний домен до того, як підніметься стек і запрацює тунель.**
+`supabase start` робить health-check по `external_url`; якщо домен ще не резолвиться,
+старт впаде з `Head "https://.../rest-admin/v1/ready": ... no such host` і CLI погасить
+контейнери. Тому:
 
-- `[api].external_url`  → `https://api.<твій-домен>`
-- `[auth].jwt_issuer`   → `https://api.<твій-домен>/auth/v1`
-- `[auth].site_url`     → URL фронта (де відкривається застосунок)
-- `[auth].additional_redirect_urls` → додай реальний URL фронта
+- `[api].external_url` і `[auth].jwt_issuer` наразі **закоментовані** — так і лиши для
+  першого запуску (health-check піде на `127.0.0.1:48000`, стек підніметься).
+- Розкоментуєш і впишеш реальний домен **на кроці 5–6**, коли тунель + DNS вже працюють,
+  і зробиш `npx supabase stop && npx supabase start`.
+- `[auth].site_url` / `additional_redirect_urls` можна одразу вказати URL фронта
+  (напр. `https://payments-app.crm-a10.workers.dev`) — вони не пінгуються на старті.
 
 ## 3. Підняти стек (окремий project_id → окремі контейнери)
 
