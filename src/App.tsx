@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { LoginForm } from './components/auth/LoginForm';
 import { Layout } from './components/layout/Layout';
 import { Payments } from './pages/Payments';
+import { Reports } from './pages/Reports';
 import { Directories } from './pages/Directories';
 import { Users } from './pages/Users';
 import { defaultView, navForRole, View } from './constants/domain';
@@ -19,6 +20,8 @@ function AuthedApp({ role }: { role: UserRole }) {
     switch (active) {
       case 'payments':
         return <Payments />;
+      case 'reports':
+        return <Reports />;
       case 'directories':
         return <Directories />;
       case 'users':

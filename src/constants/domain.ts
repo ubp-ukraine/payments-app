@@ -1,4 +1,4 @@
-import { Wallet, BookOpen, Users, type LucideIcon } from 'lucide-react';
+import { Wallet, BookOpen, Users, BarChart3, type LucideIcon } from 'lucide-react';
 import { Importance, PaymentStatus, UserRole } from '../types/database';
 
 export const ROLE_LABELS: Record<UserRole, string> = {
@@ -65,7 +65,7 @@ export function formatDate(value: string | null): string {
 }
 
 /** Views the app can show, gated by role. */
-export type View = 'payments' | 'directories' | 'users';
+export type View = 'payments' | 'reports' | 'directories' | 'users';
 
 export interface NavItem {
   view: View;
@@ -76,6 +76,7 @@ export interface NavItem {
 
 export const NAV: NavItem[] = [
   { view: 'payments', label: 'Оплати', icon: Wallet, roles: ['zamovnyk', 'buhgalter', 'admin', 'fin_director'] },
+  { view: 'reports', label: 'Звіти', icon: BarChart3, roles: ['buhgalter', 'admin', 'fin_director'] },
   { view: 'directories', label: 'Довідники', icon: BookOpen, roles: ['admin'] },
   { view: 'users', label: 'Користувачі', icon: Users, roles: ['admin'] },
 ];

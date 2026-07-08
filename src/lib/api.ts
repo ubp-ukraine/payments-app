@@ -128,6 +128,12 @@ export async function payPayment(id: string, allocations: AllocationInput[]): Pr
 }
 
 // ── Allocations, comments, attachments ───────────────────────────────────────
+export async function listAllAllocations(): Promise<PaymentAllocation[]> {
+  const { data, error } = await supabase.from('payment_allocations').select('*');
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function listAllocations(paymentId: string): Promise<PaymentAllocation[]> {
   const { data, error } = await supabase
     .from('payment_allocations')
