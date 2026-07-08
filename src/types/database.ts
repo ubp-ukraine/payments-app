@@ -2,7 +2,7 @@ export type UserRole = 'zamovnyk' | 'buhgalter' | 'admin' | 'fin_director';
 
 export type PaymentStatus = 'pending' | 'approved' | 'paid' | 'rejected';
 
-export type Importance = 'urgent' | 'planned';
+export type Importance = 'urgent' | 'today' | 'days_1_2' | 'this_week' | 'this_month';
 
 export interface DirectoryRow {
   id: string;

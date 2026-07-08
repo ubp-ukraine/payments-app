@@ -42,13 +42,15 @@ export const STATUS_META: Record<PaymentStatus, StatusMeta> = {
 
 export const IMPORTANCE_OPTIONS: { value: Importance; label: string; className: string }[] = [
   { value: 'urgent', label: 'Терміново', className: 'bg-red-50 text-red-700 border-red-200' },
-  { value: 'planned', label: 'Планова', className: 'bg-gray-100 text-gray-600 border-gray-200' },
+  { value: 'today', label: 'Сьогодні', className: 'bg-orange-50 text-orange-700 border-orange-200' },
+  { value: 'days_1_2', label: '1–2 дні', className: 'bg-amber-50 text-amber-700 border-amber-200' },
+  { value: 'this_week', label: 'Цього тижня', className: 'bg-blue-50 text-blue-700 border-blue-200' },
+  { value: 'this_month', label: 'Цього місяця', className: 'bg-gray-100 text-gray-600 border-gray-200' },
 ];
 
-export const IMPORTANCE_LABELS: Record<Importance, string> = {
-  urgent: 'Терміново',
-  planned: 'Планова',
-};
+export const IMPORTANCE_LABELS: Record<Importance, string> = Object.fromEntries(
+  IMPORTANCE_OPTIONS.map((o) => [o.value, o.label])
+) as Record<Importance, string>;
 
 export function formatUAH(amount: number): string {
   return new Intl.NumberFormat('uk-UA', {
