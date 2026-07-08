@@ -2,11 +2,7 @@ import { useState } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { LoginForm } from './components/auth/LoginForm';
 import { Layout } from './components/layout/Layout';
-import { MyPayments } from './pages/MyPayments';
-import { NewPayment } from './pages/NewPayment';
-import { Approvals } from './pages/Approvals';
-import { ToPay } from './pages/ToPay';
-import { Register } from './pages/Register';
+import { Payments } from './pages/Payments';
 import { Banks } from './pages/Banks';
 import { Users } from './pages/Users';
 import { defaultView, navForRole, View } from './constants/domain';
@@ -16,28 +12,19 @@ function AuthedApp({ role }: { role: UserRole }) {
   const nav = navForRole(role);
   const [view, setView] = useState<View>(defaultView(role));
 
-  // Guard: if the role can't access the current view, snap back to its default.
   const allowed = nav.some((n) => n.view === view);
   const active: View = allowed ? view : defaultView(role);
 
   const render = () => {
     switch (active) {
-      case 'my':
-        return <MyPayments onNew={() => setView('new')} />;
-      case 'new':
-        return <NewPayment onCreated={() => setView('my')} />;
-      case 'approve':
-        return <Approvals />;
-      case 'pay':
-        return <ToPay />;
-      case 'register':
-        return <Register />;
+      case 'payments':
+        return <Payments />;
       case 'banks':
         return <Banks />;
       case 'users':
         return <Users />;
       default:
-        return <MyPayments onNew={() => setView('new')} />;
+        return <Payments />;
     }
   };
 

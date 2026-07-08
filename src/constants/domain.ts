@@ -1,13 +1,4 @@
-import {
-  FileText,
-  PlusCircle,
-  ShieldCheck,
-  CreditCard,
-  ClipboardList,
-  Landmark,
-  Users,
-  type LucideIcon,
-} from 'lucide-react';
+import { Wallet, Landmark, Users, type LucideIcon } from 'lucide-react';
 import { PaymentStatus, UserRole } from '../types/database';
 
 export const ROLE_LABELS: Record<UserRole, string> = {
@@ -66,7 +57,7 @@ export function formatDate(value: string | null): string {
 }
 
 /** Views the app can show, gated by role. */
-export type View = 'my' | 'new' | 'approve' | 'pay' | 'register' | 'banks' | 'users';
+export type View = 'payments' | 'banks' | 'users';
 
 export interface NavItem {
   view: View;
@@ -76,11 +67,7 @@ export interface NavItem {
 }
 
 export const NAV: NavItem[] = [
-  { view: 'my', label: 'Мої заявки', icon: FileText, roles: ['zamovnyk', 'buhgalter', 'admin', 'fin_director'] },
-  { view: 'new', label: 'Нова заявка', icon: PlusCircle, roles: ['zamovnyk', 'buhgalter', 'admin', 'fin_director'] },
-  { view: 'approve', label: 'Погодження', icon: ShieldCheck, roles: ['admin', 'fin_director'] },
-  { view: 'pay', label: 'До оплати', icon: CreditCard, roles: ['buhgalter', 'admin'] },
-  { view: 'register', label: 'Реєстр оплат', icon: ClipboardList, roles: ['buhgalter', 'admin', 'fin_director'] },
+  { view: 'payments', label: 'Оплати', icon: Wallet, roles: ['zamovnyk', 'buhgalter', 'admin', 'fin_director'] },
   { view: 'banks', label: 'Банки', icon: Landmark, roles: ['admin'] },
   { view: 'users', label: 'Користувачі', icon: Users, roles: ['admin'] },
 ];
@@ -90,8 +77,13 @@ export function navForRole(role: UserRole | null): NavItem[] {
   return NAV.filter((item) => item.roles.includes(role));
 }
 
-export function defaultView(role: UserRole | null): View {
-  if (role === 'admin' || role === 'fin_director') return 'approve';
-  if (role === 'buhgalter') return 'pay';
-  return 'my';
+export function defaultView(_role: UserRole | null): View {
+  return 'payments';
 }
+
+export const STATUS_COLUMNS: { status: PaymentStatus; label: string; headerBg: string; color: string }[] = [
+  { status: 'pending', label: 'На погодженні', headerBg: 'bg-amber-100', color: 'text-amber-700' },
+  { status: 'approved', label: 'Погоджено · до оплати', headerBg: 'bg-blue-100', color: 'text-blue-700' },
+  { status: 'paid', label: 'Оплачено', headerBg: 'bg-green-100', color: 'text-green-700' },
+  { status: 'rejected', label: 'Відхилено', headerBg: 'bg-red-100', color: 'text-red-700' },
+];

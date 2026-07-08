@@ -1,13 +1,14 @@
 import { FormEvent, useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { createPayment } from '../lib/api';
-import { PAYMENT_FORMS } from '../constants/domain';
+import { useAuth } from '../../contexts/AuthContext';
+import { createPayment } from '../../lib/api';
+import { PAYMENT_FORMS } from '../../constants/domain';
+import { Modal } from '../ui/Modal';
 
 const inputCls =
   'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500';
 const labelCls = 'block text-sm font-medium text-gray-700 mb-1';
 
-export function NewPayment({ onCreated }: { onCreated: () => void }) {
+export function NewPaymentModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const { user } = useAuth();
   const [recipient, setRecipient] = useState('');
   const [amount, setAmount] = useState('');
@@ -43,17 +44,11 @@ export function NewPayment({ onCreated }: { onCreated: () => void }) {
   };
 
   return (
-    <div className="max-w-2xl">
-      <h1 className="text-2xl font-bold text-gray-900 mb-1">Нова заявка на оплату</h1>
-      <p className="text-gray-500 text-sm mb-5">Заявка піде на погодження керівнику.</p>
-
-      <form onSubmit={submit} className="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
+    <Modal title="Нова заявка на оплату" onClose={onClose}>
+      <form onSubmit={submit} className="space-y-4">
         {error && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm">
-            {error}
-          </div>
+          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm">{error}</div>
         )}
-
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="sm:col-span-2">
             <label className={labelCls}>Отримувач</label>
@@ -62,6 +57,7 @@ export function NewPayment({ onCreated }: { onCreated: () => void }) {
               value={recipient}
               onChange={(e) => setRecipient(e.target.value)}
               placeholder="Контрагент / кому платимо"
+              autoFocus
             />
           </div>
           <div>
@@ -76,11 +72,7 @@ export function NewPayment({ onCreated }: { onCreated: () => void }) {
           </div>
           <div>
             <label className={labelCls}>Форма оплати</label>
-            <select
-              className={inputCls}
-              value={paymentForm}
-              onChange={(e) => setPaymentForm(e.target.value)}
-            >
+            <select className={inputCls} value={paymentForm} onChange={(e) => setPaymentForm(e.target.value)}>
               {PAYMENT_FORMS.map((f) => (
                 <option key={f} value={f}>
                   {f}
@@ -90,12 +82,7 @@ export function NewPayment({ onCreated }: { onCreated: () => void }) {
           </div>
           <div>
             <label className={labelCls}>Дата оплати</label>
-            <input
-              type="date"
-              className={inputCls}
-              value={payDate}
-              onChange={(e) => setPayDate(e.target.value)}
-            />
+            <input type="date" className={inputCls} value={payDate} onChange={(e) => setPayDate(e.target.value)} />
           </div>
           <div className="sm:col-span-2">
             <label className={labelCls}>Призначення платежу</label>
@@ -108,8 +95,14 @@ export function NewPayment({ onCreated }: { onCreated: () => void }) {
             />
           </div>
         </div>
-
-        <div className="flex gap-2">
+        <div className="flex gap-2 justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Скасувати
+          </button>
           <button
             type="submit"
             disabled={saving}
@@ -119,6 +112,6 @@ export function NewPayment({ onCreated }: { onCreated: () => void }) {
           </button>
         </div>
       </form>
-    </div>
+    </Modal>
   );
 }
