@@ -31,6 +31,36 @@ export async function updateUserRole(id: string, role: UserRole): Promise<void> 
   if (error) throw error;
 }
 
+export interface NewUserInput {
+  email: string;
+  password: string;
+  full_name: string | null;
+  role: UserRole;
+}
+
+export async function registerUser(input: NewUserInput): Promise<void> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const { data, error } = await supabase.functions.invoke('register-user', {
+    body: { ...input, access_token: session?.access_token },
+  });
+  if (error) {
+    let message = error.message;
+    try {
+      const ctx = (error as { context?: { json?: () => Promise<{ error?: string }> } }).context;
+      const parsed = ctx?.json ? await ctx.json() : null;
+      if (parsed?.error) message = parsed.error;
+    } catch {
+      /* keep default message */
+    }
+    throw new Error(message);
+  }
+  if ((data as { error?: string } | null)?.error) {
+    throw new Error((data as { error: string }).error);
+  }
+}
+
 // ── Directories (banks / payer_companies / payment_forms) ────────────────────
 export type DirTable = 'banks' | 'payer_companies' | 'payment_forms';
 
