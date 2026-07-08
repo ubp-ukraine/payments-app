@@ -1,0 +1,124 @@
+# Supabase config для payments-app.
+# ВАЖЛИВО: цей інстанс піднімається НА ТІЙ САМІЙ VM, що й основний проєкт (WMS),
+# тому project_id ІНШИЙ і ВСІ порти зміщені на +10, щоб не було конфлікту з основним
+# стеком (основний займає 5432x, edge inspector 8083).
+#
+#   Основний (WMS)      payments-app (цей)
+#   api      54321  →   54331   ← сюди веде НОВИЙ Cloudflare Tunnel
+#   db       54322  →   54332
+#   shadow   54320  →   54330
+#   pooler   54329  →   54339
+#   studio   54323  →   54333
+#   inbucket 54324  →   54334
+#   analytics 54327 →   54337
+#   edge insp 8083  →   8093
+#
+# Docker-контейнери namespaced за project_id, тож два стеки живуть поруч.
+
+project_id = "payments-app"
+
+[api]
+enabled = true
+port = 54331
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+# Публічний HTTPS URL API (Kong за Cloudflare Tunnel). ЗАМІНИ на реальний домен.
+external_url = "https://api.oplaty.example.com"
+
+[api.tls]
+enabled = false
+
+[db]
+port = 54332
+shadow_port = 54330
+health_timeout = "2m"
+# Має збігатися з major_version основного стеку на цій VM.
+major_version = 17
+
+[db.pooler]
+enabled = false
+port = 54339
+pool_mode = "transaction"
+default_pool_size = 20
+max_client_conn = 100
+
+[db.migrations]
+enabled = true
+schema_paths = []
+
+[db.seed]
+enabled = false
+sql_paths = ["./seed.sql"]
+
+[realtime]
+# Локально контейнер realtime часто нестабільний; тут він не потрібен.
+enabled = false
+
+[studio]
+enabled = true
+port = 54333
+api_url = "http://127.0.0.1"
+
+[inbucket]
+enabled = true
+port = 54334
+
+[storage]
+enabled = true
+file_size_limit = "50MiB"
+
+[storage.s3_protocol]
+enabled = true
+
+[storage.analytics]
+enabled = false
+
+[storage.vector]
+enabled = false
+
+[auth]
+enabled = true
+# Базовий URL ФРОНТА (де відкривається застосунок). ЗАМІНИ на реальний.
+site_url = "https://oplaty.example.com"
+# Точні URL, дозволені для редіректів після авторизації (dev + прод фронта).
+additional_redirect_urls = [
+  "http://localhost:5174",
+  "http://127.0.0.1:5174",
+  "https://oplaty.example.com",
+]
+jwt_expiry = 3600
+# ЗАМІНИ домен: інакше посилання recovery/verify будуть на 127.0.0.1.
+jwt_issuer = "https://api.oplaty.example.com/auth/v1"
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+enable_signup = true
+enable_anonymous_sign_ins = false
+enable_manual_linking = false
+minimum_password_length = 6
+password_requirements = ""
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+# Немає SMTP локально — не вимагаємо підтвердження email, щоб логін працював одразу.
+enable_confirmations = false
+secure_password_change = false
+max_frequency = "1s"
+otp_length = 6
+otp_expiry = 3600
+
+[auth.sms]
+enable_signup = false
+enable_confirmations = false
+
+[edge_runtime]
+enabled = true
+policy = "per_worker"
+inspector_port = 8093
+deno_version = 2
+
+[analytics]
+enabled = false
+port = 54337
+backend = "postgres"

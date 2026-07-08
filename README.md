@@ -24,18 +24,19 @@ cd payments-app
 npm install
 ```
 
-## 2. База даних (новий Supabase-інстанс)
+## 2. База даних (новий Supabase-інстанс на VM)
 
 Проєкт розрахований на **окремий self-hosted Supabase** на власному api-домені
 (наприклад `https://api.oplaty.example.com`) — не змішується з основним WMS.
+Піднімається на **тій самій VM**, що й основний проєкт, але з іншим `project_id`
+і зміщеними портами (Kong на `54331`) — див. [`supabase/config.toml`](supabase/config.toml).
 
-1. Розгорни новий інстанс Supabase (Docker / CLI) на сервері з окремим доменом.
-2. Застосуй міграцію [`supabase/migrations/0001_init_auth_and_users.sql`](supabase/migrations/0001_init_auth_and_users.sql):
-   - або через **Studio → SQL Editor** (вставити вміст файлу та Run);
-   - або `psql "<CONNECTION_STRING>" -f supabase/migrations/0001_init_auth_and_users.sql`.
+**Повна покрокова інструкція для VM (Supabase CLI + Cloudflare Tunnel):
+[`docs/DEPLOY_SELF_HOSTED.md`](docs/DEPLOY_SELF_HOSTED.md).**
 
-Міграція створює таблицю `public.users`, вмикає RLS і додає тригер, який
-автоматично заводить профіль з роллю `admin` для кожного нового користувача Auth.
+Коротко: на VM `npx supabase start` сам підніме стек на зміщених портах і застосує
+міграцію [`supabase/migrations/0001_init_auth_and_users.sql`](supabase/migrations/0001_init_auth_and_users.sql) —
+створить таблицю `public.users`, RLS і тригер авто-профілю з роллю `admin`.
 
 ## 3. Налаштування .env
 
