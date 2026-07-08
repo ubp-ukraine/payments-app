@@ -1,3 +1,13 @@
+import {
+  FileText,
+  PlusCircle,
+  ShieldCheck,
+  CreditCard,
+  ClipboardList,
+  Landmark,
+  Users,
+  type LucideIcon,
+} from 'lucide-react';
 import { PaymentStatus, UserRole } from '../types/database';
 
 export const ROLE_LABELS: Record<UserRole, string> = {
@@ -61,17 +71,18 @@ export type View = 'my' | 'new' | 'approve' | 'pay' | 'register' | 'banks' | 'us
 export interface NavItem {
   view: View;
   label: string;
+  icon: LucideIcon;
   roles: UserRole[];
 }
 
 export const NAV: NavItem[] = [
-  { view: 'my', label: 'Мої заявки', roles: ['zamovnyk', 'buhgalter', 'admin', 'fin_director'] },
-  { view: 'new', label: 'Нова заявка', roles: ['zamovnyk', 'buhgalter', 'admin', 'fin_director'] },
-  { view: 'approve', label: 'Погодження', roles: ['admin', 'fin_director'] },
-  { view: 'pay', label: 'До оплати', roles: ['buhgalter', 'admin'] },
-  { view: 'register', label: 'Реєстр оплат', roles: ['buhgalter', 'admin', 'fin_director'] },
-  { view: 'banks', label: 'Банки', roles: ['admin'] },
-  { view: 'users', label: 'Користувачі', roles: ['admin'] },
+  { view: 'my', label: 'Мої заявки', icon: FileText, roles: ['zamovnyk', 'buhgalter', 'admin', 'fin_director'] },
+  { view: 'new', label: 'Нова заявка', icon: PlusCircle, roles: ['zamovnyk', 'buhgalter', 'admin', 'fin_director'] },
+  { view: 'approve', label: 'Погодження', icon: ShieldCheck, roles: ['admin', 'fin_director'] },
+  { view: 'pay', label: 'До оплати', icon: CreditCard, roles: ['buhgalter', 'admin'] },
+  { view: 'register', label: 'Реєстр оплат', icon: ClipboardList, roles: ['buhgalter', 'admin', 'fin_director'] },
+  { view: 'banks', label: 'Банки', icon: Landmark, roles: ['admin'] },
+  { view: 'users', label: 'Користувачі', icon: Users, roles: ['admin'] },
 ];
 
 export function navForRole(role: UserRole | null): NavItem[] {
