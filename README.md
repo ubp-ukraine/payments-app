@@ -29,7 +29,7 @@ npm install
 Проєкт розрахований на **окремий self-hosted Supabase** на власному api-домені
 (наприклад `https://api.oplaty.example.com`) — не змішується з основним WMS.
 Піднімається на **тій самій VM**, що й основний проєкт, але з іншим `project_id`
-і зміщеними портами (Kong на `54331`) — див. [`supabase/config.toml`](supabase/config.toml).
+і окремим блоком портів (Kong на `48000`) — див. [`supabase/config.toml`](supabase/config.toml).
 
 **Повна покрокова інструкція для VM (Supabase CLI + Cloudflare Tunnel):
 [`docs/DEPLOY_SELF_HOSTED.md`](docs/DEPLOY_SELF_HOSTED.md).**

@@ -1,17 +1,18 @@
 # Supabase config для payments-app.
 # ВАЖЛИВО: цей інстанс піднімається НА ТІЙ САМІЙ VM, що й основний проєкт (WMS),
-# тому project_id ІНШИЙ і ВСІ порти зміщені на +10, щоб не було конфлікту з основним
-# стеком (основний займає 5432x, edge inspector 8083).
+# тому project_id ІНШИЙ і порти взяті з ОКРЕМОГО блоку 48000-48007 —
+# навмисно далеко від основного стеку (той займає 5432x, edge inspector 8083),
+# щоб нічого не перетиналось.
 #
 #   Основний (WMS)      payments-app (цей)
-#   api      54321  →   54331   ← сюди веде НОВИЙ Cloudflare Tunnel
-#   db       54322  →   54332
-#   shadow   54320  →   54330
-#   pooler   54329  →   54339
-#   studio   54323  →   54333
-#   inbucket 54324  →   54334
-#   analytics 54327 →   54337
-#   edge insp 8083  →   8093
+#   api      54321  →   48000   ← сюди веде НОВИЙ Cloudflare Tunnel
+#   db       54322  →   48001
+#   shadow   54320  →   48002
+#   pooler   54329  →   48003
+#   studio   54323  →   48004
+#   inbucket 54324  →   48005
+#   analytics 54327 →   48006
+#   edge insp 8083  →   48007
 #
 # Docker-контейнери namespaced за project_id, тож два стеки живуть поруч.
 
@@ -19,7 +20,7 @@ project_id = "payments-app"
 
 [api]
 enabled = true
-port = 54331
+port = 48000
 schemas = ["public", "graphql_public"]
 extra_search_path = ["public", "extensions"]
 max_rows = 1000
@@ -30,15 +31,15 @@ external_url = "https://api.oplaty.example.com"
 enabled = false
 
 [db]
-port = 54332
-shadow_port = 54330
+port = 48001
+shadow_port = 48002
 health_timeout = "2m"
 # Має збігатися з major_version основного стеку на цій VM.
 major_version = 17
 
 [db.pooler]
 enabled = false
-port = 54339
+port = 48003
 pool_mode = "transaction"
 default_pool_size = 20
 max_client_conn = 100
@@ -57,12 +58,12 @@ enabled = false
 
 [studio]
 enabled = true
-port = 54333
+port = 48004
 api_url = "http://127.0.0.1"
 
 [inbucket]
 enabled = true
-port = 54334
+port = 48005
 
 [storage]
 enabled = true
@@ -115,10 +116,10 @@ enable_confirmations = false
 [edge_runtime]
 enabled = true
 policy = "per_worker"
-inspector_port = 8093
+inspector_port = 48007
 deno_version = 2
 
 [analytics]
 enabled = false
-port = 54337
+port = 48006
 backend = "postgres"
