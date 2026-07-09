@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { LoginForm } from './components/auth/LoginForm';
 import { Layout } from './components/layout/Layout';
@@ -6,8 +6,11 @@ import { Payments } from './pages/Payments';
 import { Reports } from './pages/Reports';
 import { Directories } from './pages/Directories';
 import { Users } from './pages/Users';
-import { defaultView, navForRole, View } from './constants/domain';
+import { SubmitPayment } from './pages/SubmitPayment';
+import { defaultView, navForRole, SUBMIT_PATH, View } from './constants/domain';
 import { UserRole } from './types/database';
+
+const isSubmitPath = (p: string) => p === SUBMIT_PATH || p === SUBMIT_PATH + '/';
 
 function AuthedApp({ role }: { role: UserRole }) {
   const nav = navForRole(role);
@@ -40,6 +43,18 @@ function AuthedApp({ role }: { role: UserRole }) {
 
 function AppContent() {
   const { user, profile, loading, signOut } = useAuth();
+  const [path, setPath] = useState(() => window.location.pathname);
+
+  useEffect(() => {
+    const onPop = () => setPath(window.location.pathname);
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
+  const navigate = (to: string) => {
+    window.history.pushState({}, '', to);
+    setPath(to);
+  };
 
   if (loading) {
     return (
@@ -71,6 +86,10 @@ function AppContent() {
         </button>
       </div>
     );
+  }
+
+  if (isSubmitPath(path)) {
+    return <SubmitPayment onDone={() => navigate('/')} />;
   }
 
   return <AuthedApp role={profile.role} />;

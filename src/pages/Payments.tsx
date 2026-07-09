@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Check, Link2, Plus } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { DirectoryRow, Payment, PaymentStatus, User } from '../types/database';
 import { dirMap, listPayments, usersMap } from '../lib/api';
-import { formatUAH, IMPORTANCE_OPTIONS, STATUS_COLUMNS } from '../constants/domain';
+import { formatUAH, IMPORTANCE_OPTIONS, STATUS_COLUMNS, SUBMIT_PATH } from '../constants/domain';
 import { KanbanBoard, KanbanColumn } from '../components/ui/KanbanBoard';
 import { NewPaymentModal } from '../components/payments/NewPaymentModal';
 import { PaymentModal } from '../components/payments/PaymentModal';
+import { PaymentFiles } from '../components/payments/PaymentFiles';
+
+type Tab = 'requests' | 'files';
 
 export function Payments() {
   const { profile, user } = useAuth();
@@ -18,6 +21,18 @@ export function Payments() {
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
   const [selected, setSelected] = useState<Payment | null>(null);
+  const [tab, setTab] = useState<Tab>('requests');
+  const [copied, setCopied] = useState(false);
+
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}${SUBMIT_PATH}`);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      window.prompt('Скопіюйте посилання:', `${window.location.origin}${SUBMIT_PATH}`);
+    }
+  };
 
   const load = async () => {
     setLoading(true);
@@ -65,16 +80,49 @@ export function Payments() {
           <h1 className="text-2xl font-bold text-gray-900">Оплати</h1>
           <p className="text-gray-500 text-sm">Заявки, погодження та проведення — усе в одному місці.</p>
         </div>
-        <button
-          onClick={() => setShowNew(true)}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-medium hover:bg-brand-700"
-        >
-          <Plus size={16} />
-          Нова заявка
-        </button>
+        {tab === 'requests' && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={copyLink}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              title="Скопіювати посилання на форму подачі оплати"
+            >
+              {copied ? <Check size={16} className="text-green-600" /> : <Link2 size={16} />}
+              {copied ? 'Скопійовано' : 'Поділитися формою'}
+            </button>
+            <button
+              onClick={() => setShowNew(true)}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-medium hover:bg-brand-700"
+            >
+              <Plus size={16} />
+              Нова заявка
+            </button>
+          </div>
+        )}
       </div>
 
-      {loading ? (
+      <div className="flex gap-1 mb-5 border-b border-gray-200">
+        {([
+          { key: 'requests', label: 'Заявки' },
+          { key: 'files', label: 'Файли' },
+        ] as { key: Tab; label: string }[]).map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`px-4 py-2 text-sm font-medium -mb-px border-b-2 transition-colors ${
+              tab === t.key
+                ? 'border-brand-600 text-brand-700'
+                : 'border-transparent text-gray-500 hover:text-gray-800'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'files' ? (
+        <PaymentFiles payments={payments} companies={companies} />
+      ) : loading ? (
         <div className="text-gray-500">Завантаження...</div>
       ) : (
         <KanbanBoard
@@ -93,14 +141,16 @@ export function Payments() {
               >
                 <div className="flex items-start justify-between gap-2">
                   <span className="font-semibold text-gray-900 text-sm leading-snug">
-                    {p.purpose || company || 'Заявка'}
+                    {company || p.recipient || 'Заявка'}
                   </span>
                   <span className="font-bold tabular-nums text-gray-900 text-sm whitespace-nowrap">
                     {formatUAH(p.amount)}
                   </span>
                 </div>
+                {p.purpose && (
+                  <div className="text-xs text-gray-700 mt-1 line-clamp-2 whitespace-pre-wrap">{p.purpose}</div>
+                )}
                 <div className="text-xs text-gray-500 mt-1">
-                  {company ? `${company} · ` : ''}
                   {form ? `${form} · ` : ''}
                   {uName(p.author_id)}
                 </div>

@@ -37,6 +37,7 @@ export interface Bank {
 
 export interface Payment {
   id: string;
+  number: number | null;
   author_id: string;
   recipient: string | null;
   amount: number;
@@ -67,5 +68,13 @@ export interface PaymentComment {
   payment_id: string;
   author_id: string;
   text: string;
+  created_at: string;
+}
+
+export interface PaymentTypeAllocation {
+  id: string;
+  payment_id: string;
+  type_id: string;
+  amount: number;
   created_at: string;
 }

@@ -59,12 +59,21 @@ export function formatUAH(amount: number): string {
   }).format(amount) + ' ₴';
 }
 
+/** Людиночитний номер платежу, напр. OP-000123. */
+export function formatPaymentNo(n: number | null): string {
+  if (n == null) return '—';
+  return 'OP-' + String(n).padStart(6, '0');
+}
+
 export function formatDate(value: string | null): string {
   if (!value) return '—';
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return value;
   return d.toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
+
+/** Пряме посилання на форму подачі оплати (login-gated). */
+export const SUBMIT_PATH = '/new';
 
 /** Views the app can show, gated by role. */
 export type View = 'payments' | 'reports' | 'directories' | 'users';

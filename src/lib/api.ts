@@ -7,6 +7,7 @@ import {
   PaymentAttachment,
   PaymentComment,
   PaymentStatus,
+  PaymentTypeAllocation,
   User,
   UserRole,
 } from '../types/database';
@@ -61,8 +62,8 @@ export async function registerUser(input: NewUserInput): Promise<void> {
   }
 }
 
-// ── Directories (banks / payer_companies / payment_forms) ────────────────────
-export type DirTable = 'banks' | 'payer_companies' | 'payment_forms';
+// ── Directories (banks / payer_companies / payment_forms / payment_types) ────
+export type DirTable = 'banks' | 'payer_companies' | 'payment_forms' | 'payment_types';
 
 export async function listDir(table: DirTable, activeOnly = false): Promise<DirectoryRow[]> {
   let query = supabase.from(table).select('id, name, is_active, created_at').order('created_at', {
@@ -173,6 +174,41 @@ export async function listAllocations(paymentId: string): Promise<PaymentAllocat
   return data ?? [];
 }
 
+// ── Розбивка оплати по типах ─────────────────────────────────────────────────
+export async function listTypeAllocations(paymentId: string): Promise<PaymentTypeAllocation[]> {
+  const { data, error } = await supabase
+    .from('payment_type_allocations')
+    .select('*')
+    .eq('payment_id', paymentId);
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function listAllTypeAllocations(): Promise<PaymentTypeAllocation[]> {
+  const { data, error } = await supabase.from('payment_type_allocations').select('*');
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** Замінює розбивку по типах: видаляє попередню й вставляє нову. */
+export async function saveTypeAllocations(
+  paymentId: string,
+  rows: { type_id: string; amount: number }[]
+): Promise<void> {
+  const { error: delErr } = await supabase
+    .from('payment_type_allocations')
+    .delete()
+    .eq('payment_id', paymentId);
+  if (delErr) throw delErr;
+  const insert = rows
+    .filter((r) => r.amount > 0)
+    .map((r) => ({ payment_id: paymentId, type_id: r.type_id, amount: r.amount }));
+  if (insert.length) {
+    const { error } = await supabase.from('payment_type_allocations').insert(insert);
+    if (error) throw error;
+  }
+}
+
 export async function listComments(paymentId: string): Promise<PaymentComment[]> {
   const { data, error } = await supabase
     .from('payment_comments')
@@ -209,6 +245,15 @@ export async function listAttachments(paymentId: string): Promise<PaymentAttachm
     .select('*')
     .eq('payment_id', paymentId)
     .order('created_at', { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function listAllAttachments(): Promise<PaymentAttachment[]> {
+  const { data, error } = await supabase
+    .from('payment_attachments')
+    .select('*')
+    .order('created_at', { ascending: false });
   if (error) throw error;
   return data ?? [];
 }
