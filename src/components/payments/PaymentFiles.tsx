@@ -45,9 +45,14 @@ export function PaymentFiles({ payments, companies }: Props) {
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
     if (!needle) return attachments;
-    return attachments.filter(
-      (a) => (a.name || '').toLowerCase().includes(needle) || paymentLabel(a).toLowerCase().includes(needle)
-    );
+    return attachments.filter((a) => {
+      const inv = paymentsById[a.payment_id]?.invoice_number || '';
+      return (
+        (a.name || '').toLowerCase().includes(needle) ||
+        paymentLabel(a).toLowerCase().includes(needle) ||
+        inv.toLowerCase().includes(needle)
+      );
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, attachments, paymentsById]);
 
@@ -60,7 +65,7 @@ export function PaymentFiles({ payments, companies }: Props) {
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Пошук за назвою файлу чи заявкою…"
+          placeholder="Пошук за назвою файлу, заявкою чи № рахунку…"
           className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
         />
       </div>

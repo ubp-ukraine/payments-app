@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Check, Link2, Plus } from 'lucide-react';
+import { Check, Link2, Plus, Search } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { DirectoryRow, Payment, PaymentStatus, User } from '../types/database';
 import { dirMap, listPayments, usersMap } from '../lib/api';
-import { formatUAH, IMPORTANCE_OPTIONS, STATUS_COLUMNS, SUBMIT_PATH } from '../constants/domain';
+import { formatPaymentNo, formatUAH, IMPORTANCE_OPTIONS, STATUS_COLUMNS, SUBMIT_PATH } from '../constants/domain';
 import { KanbanBoard, KanbanColumn } from '../components/ui/KanbanBoard';
 import { NewPaymentModal } from '../components/payments/NewPaymentModal';
 import { PaymentModal } from '../components/payments/PaymentModal';
@@ -23,6 +23,7 @@ export function Payments() {
   const [selected, setSelected] = useState<Payment | null>(null);
   const [tab, setTab] = useState<Tab>('requests');
   const [copied, setCopied] = useState(false);
+  const [q, setQ] = useState('');
 
   const copyLink = async () => {
     try {
@@ -58,17 +59,28 @@ export function Payments() {
 
   const actionHint = (p: Payment): string | null => {
     if (p.status === 'pending' && (role === 'admin' || role === 'fin_director')) return 'Потребує погодження';
-    if (p.status === 'approved' && (role === 'buhgalter' || role === 'admin')) return 'До оплати';
+    if (p.status === 'approved' && (role === 'buhgalter' || role === 'admin')) return 'Потребує розподілу';
+    if (p.status === 'allocated' && (role === 'buhgalter' || role === 'admin')) return 'До оплати';
     if (p.status === 'rejected' && p.author_id === user?.id) return 'Можна подати знову';
     return null;
   };
+
+  const matches = (p: Payment): boolean => {
+    const needle = q.trim().toLowerCase();
+    if (!needle) return true;
+    const company = p.payer_company_id ? companies[p.payer_company_id]?.name ?? '' : '';
+    return [p.invoice_number ?? '', p.purpose ?? '', company, p.recipient ?? '', formatPaymentNo(p.number)].some(
+      (v) => v.toLowerCase().includes(needle)
+    );
+  };
+  const visible = payments.filter(matches);
 
   const columns: KanbanColumn<Payment>[] = STATUS_COLUMNS.map((c) => ({
     key: c.status,
     label: c.label,
     color: c.color,
     headerBg: c.headerBg,
-    items: payments.filter((p) => p.status === (c.status as PaymentStatus)),
+    items: visible.filter((p) => p.status === (c.status as PaymentStatus)),
   }));
 
   const uName = (id: string) => users[id]?.full_name || users[id]?.email || '—';
@@ -125,6 +137,16 @@ export function Payments() {
       ) : loading ? (
         <div className="text-gray-500">Завантаження...</div>
       ) : (
+        <>
+        <div className="mb-4 relative max-w-sm">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Пошук за № рахунку, призначенням, підприємством…"
+            className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+          />
+        </div>
         <KanbanBoard
           columns={columns}
           getItemKey={(p) => p.id}
@@ -154,6 +176,9 @@ export function Payments() {
                   {form ? `${form} · ` : ''}
                   {uName(p.author_id)}
                 </div>
+                {p.invoice_number && (
+                  <div className="text-[11px] text-gray-400 mt-1 font-mono truncate">№ {p.invoice_number}</div>
+                )}
                 <div className="mt-2 flex items-center gap-1.5 flex-wrap">
                   {imp && (
                     <span className={`inline-flex items-center rounded-md border text-[11px] font-semibold px-2 py-0.5 ${imp.className}`}>
@@ -170,6 +195,7 @@ export function Payments() {
             );
           }}
         />
+        </>
       )}
 
       {showNew && (

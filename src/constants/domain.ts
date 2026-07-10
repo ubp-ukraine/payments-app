@@ -28,6 +28,11 @@ export const STATUS_META: Record<PaymentStatus, StatusMeta> = {
     pill: 'bg-blue-50 text-blue-700 border-blue-200',
     dot: 'bg-blue-500',
   },
+  allocated: {
+    label: 'Розподілено',
+    pill: 'bg-violet-50 text-violet-700 border-violet-200',
+    dot: 'bg-violet-500',
+  },
   paid: {
     label: 'Оплачено',
     pill: 'bg-green-50 text-green-700 border-green-200',
@@ -72,6 +77,20 @@ export function formatDate(value: string | null): string {
   return d.toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
+/** Дата + час, напр. «09.07.2026, 19:47» — для підписів блоків таймлайну. */
+export function formatDateTime(value: string | null): string {
+  if (!value) return '—';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleString('uk-UA', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
 /** Пряме посилання на форму подачі оплати (login-gated). */
 export const SUBMIT_PATH = '/new';
 
@@ -103,7 +122,8 @@ export function defaultView(_role: UserRole | null): View {
 
 export const STATUS_COLUMNS: { status: PaymentStatus; label: string; headerBg: string; color: string }[] = [
   { status: 'pending', label: 'На погодженні', headerBg: 'bg-amber-100', color: 'text-amber-700' },
-  { status: 'approved', label: 'Погоджено · до оплати', headerBg: 'bg-blue-100', color: 'text-blue-700' },
+  { status: 'approved', label: 'Погоджено · до розподілу', headerBg: 'bg-blue-100', color: 'text-blue-700' },
+  { status: 'allocated', label: 'До оплати', headerBg: 'bg-violet-100', color: 'text-violet-700' },
   { status: 'paid', label: 'Оплачено', headerBg: 'bg-green-100', color: 'text-green-700' },
   { status: 'rejected', label: 'Відхилено', headerBg: 'bg-red-100', color: 'text-red-700' },
 ];

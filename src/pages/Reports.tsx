@@ -35,6 +35,7 @@ export function Reports() {
 
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
+  const [invoiceQ, setInvoiceQ] = useState('');
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [selected, setSelected] = useState<Payment | null>(null);
 
@@ -77,11 +78,15 @@ export function Reports() {
       return true;
     };
 
+    const iq = invoiceQ.trim().toLowerCase();
     const acc: Record<string, BankGroup> = {};
     for (const a of allocations) {
       const payment = payments[a.payment_id];
       if (!payment) continue;
+      // Лише фактично проведені оплати (розподілені, але ще не оплачені — не рахуємо).
+      if (payment.status !== 'paid') continue;
       if (!inRange(payment.paid_at)) continue;
+      if (iq && !(payment.invoice_number || '').toLowerCase().includes(iq)) continue;
       const amount = Number(a.amount);
       const name = banks[a.bank_id]?.name ?? 'Невідомий банк';
       if (!acc[a.bank_id]) acc[a.bank_id] = { id: a.bank_id, name, sum: 0, count: 0, rows: [] };
@@ -103,7 +108,12 @@ export function Reports() {
     }
     const t = list.reduce((s, r) => s + r.sum, 0);
     return { groups: list, total: t };
-  }, [allocations, payments, banks, from, to]);
+  }, [allocations, payments, banks, from, to, invoiceQ]);
+
+  const anyPaid = useMemo(
+    () => allocations.some((a) => payments[a.payment_id]?.status === 'paid'),
+    [allocations, payments]
+  );
 
   const max = groups.length ? groups[0].sum : 0;
   const periodLabel = from || to ? `${from || '…'} — ${to || '…'}` : 'весь час';
@@ -149,6 +159,7 @@ export function Reports() {
   const clearPeriod = () => {
     setFrom('');
     setTo('');
+    setInvoiceQ('');
   };
 
   const inputCls =
@@ -170,10 +181,14 @@ export function Reports() {
           <label className="block text-[11px] text-gray-400 mb-1">по</label>
           <input type="date" className={inputCls} value={to} onChange={(e) => setTo(e.target.value)} min={from || undefined} />
         </div>
+        <div>
+          <label className="block text-[11px] text-gray-400 mb-1">Номер рахунку</label>
+          <input className={inputCls} value={invoiceQ} onChange={(e) => setInvoiceQ(e.target.value)} placeholder="Пошук за № рахунку…" />
+        </div>
         <button onClick={setThisMonth} className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50">
           Цей місяць
         </button>
-        {(from || to) && (
+        {(from || to || invoiceQ) && (
           <button onClick={clearPeriod} className="px-3 py-1.5 rounded-lg text-sm text-gray-500 hover:text-gray-800">
             Очистити
           </button>
@@ -184,7 +199,7 @@ export function Reports() {
         <div className="text-gray-500">Завантаження...</div>
       ) : groups.length === 0 ? (
         <div className="bg-white border border-gray-200 rounded-xl p-10 text-center text-gray-500">
-          {allocations.length === 0 ? 'Ще немає проведених оплат.' : 'За вибраний період оплат немає.'}
+          {!anyPaid ? 'Ще немає проведених оплат.' : 'За вибраними фільтрами оплат немає.'}
         </div>
       ) : (
         <div className="space-y-4">

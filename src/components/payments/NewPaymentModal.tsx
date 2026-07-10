@@ -19,6 +19,7 @@ export function NewPaymentModal({ onClose, onCreated }: { onClose: () => void; o
   const [companyId, setCompanyId] = useState('');
   const [formId, setFormId] = useState('');
   const [importance, setImportance] = useState<Importance | ''>('');
+  const [invoiceNumber, setInvoiceNumber] = useState('');
   const [purpose, setPurpose] = useState('');
   const [comment, setComment] = useState('');
   const [files, setFiles] = useState<File[]>([]);
@@ -55,13 +56,14 @@ export function NewPaymentModal({ onClose, onCreated }: { onClose: () => void; o
         payer_company_id: companyId,
         payment_form_id: formId,
         importance,
+        invoice_number: invoiceNumber.trim() || null,
         purpose: purpose.trim(),
       });
       for (const file of files) {
-        await uploadAttachment(id, file);
+        await uploadAttachment(id, file, 'submission');
       }
       if (comment.trim()) {
-        await addComment(id, user.id, comment.trim());
+        await addComment(id, user.id, comment.trim(), 'submission');
       }
       onCreated();
     } catch (err) {
@@ -78,16 +80,27 @@ export function NewPaymentModal({ onClose, onCreated }: { onClose: () => void; o
           <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm">{error}</div>
         )}
 
-        <div>
-          <label className={labelCls}>Сума, ₴ *</label>
-          <input
-            className={inputCls}
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            inputMode="decimal"
-            placeholder="Введіть цифру"
-            autoFocus
-          />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className={labelCls}>Сума, ₴ *</label>
+            <input
+              className={inputCls}
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              inputMode="decimal"
+              placeholder="Введіть цифру"
+              autoFocus
+            />
+          </div>
+          <div>
+            <label className={labelCls}>Номер рахунку</label>
+            <input
+              className={inputCls}
+              value={invoiceNumber}
+              onChange={(e) => setInvoiceNumber(e.target.value)}
+              placeholder="напр. РФ-000123"
+            />
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

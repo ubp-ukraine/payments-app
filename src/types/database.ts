@@ -1,8 +1,11 @@
 export type UserRole = 'zamovnyk' | 'buhgalter' | 'admin' | 'fin_director';
 
-export type PaymentStatus = 'pending' | 'approved' | 'paid' | 'rejected';
+export type PaymentStatus = 'pending' | 'approved' | 'allocated' | 'paid' | 'rejected';
 
 export type Importance = 'urgent' | 'today' | 'days_1_2' | 'this_week' | 'this_month';
+
+/** Етап процесу, до якого прив'язано коментар або файл. */
+export type Stage = 'submission' | 'approval' | 'allocation' | 'payment' | 'discussion';
 
 export interface DirectoryRow {
   id: string;
@@ -16,6 +19,7 @@ export interface PaymentAttachment {
   payment_id: string;
   path: string;
   name: string | null;
+  stage: Stage;
   created_at: string;
 }
 
@@ -45,11 +49,14 @@ export interface Payment {
   payer_company_id: string | null;
   payment_form_id: string | null;
   importance: Importance | null;
+  invoice_number: string | null;
   pay_date: string | null;
   purpose: string | null;
   status: PaymentStatus;
   approved_by: string | null;
   approved_at: string | null;
+  allocated_by: string | null;
+  allocated_at: string | null;
   paid_by: string | null;
   paid_at: string | null;
   created_at: string;
@@ -68,6 +75,7 @@ export interface PaymentComment {
   payment_id: string;
   author_id: string;
   text: string;
+  stage: Stage;
   created_at: string;
 }
 

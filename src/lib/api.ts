@@ -8,6 +8,7 @@ import {
   PaymentComment,
   PaymentStatus,
   PaymentTypeAllocation,
+  Stage,
   User,
   UserRole,
 } from '../types/database';
@@ -96,6 +97,7 @@ export interface NewPaymentInput {
   payer_company_id: string | null;
   payment_form_id: string | null;
   importance: Importance | null;
+  invoice_number: string | null;
   purpose: string;
 }
 
@@ -107,6 +109,13 @@ export async function listPayments(status?: PaymentStatus): Promise<Payment[]> {
   return data ?? [];
 }
 
+/** Одна заявка — для оновлення модалки на місці після дії. */
+export async function getPayment(id: string): Promise<Payment> {
+  const { data, error } = await supabase.from('payments').select('*').eq('id', id).single();
+  if (error) throw error;
+  return data as Payment;
+}
+
 export async function createPayment(authorId: string, input: NewPaymentInput): Promise<string> {
   const { data, error } = await supabase
     .from('payments')
@@ -116,6 +125,7 @@ export async function createPayment(authorId: string, input: NewPaymentInput): P
       payer_company_id: input.payer_company_id,
       payment_form_id: input.payment_form_id,
       importance: input.importance,
+      invoice_number: input.invoice_number,
       purpose: input.purpose,
       status: 'pending',
     })
@@ -133,7 +143,7 @@ export async function approvePayment(id: string): Promise<void> {
 export async function rejectPayment(id: string, comment: string, authorId: string): Promise<void> {
   const { error } = await supabase.from('payments').update({ status: 'rejected' }).eq('id', id);
   if (error) throw error;
-  await addComment(id, authorId, comment);
+  await addComment(id, authorId, comment, 'approval');
 }
 
 export async function resubmitPayment(id: string): Promise<void> {
@@ -146,7 +156,17 @@ export interface AllocationInput {
   amount: number;
 }
 
-export async function payPayment(id: string, allocations: AllocationInput[]): Promise<void> {
+/**
+ * Етап «Розподіл по банках»: зберігає (замінює) розбивку суми по банках і
+ * переводить заявку approved → allocated. Повторний виклик у стані allocated
+ * лише оновлює розбивку (статус не змінюється).
+ */
+export async function allocatePayment(id: string, allocations: AllocationInput[]): Promise<void> {
+  const { error: delErr } = await supabase
+    .from('payment_allocations')
+    .delete()
+    .eq('payment_id', id);
+  if (delErr) throw delErr;
   const rows = allocations
     .filter((a) => a.amount > 0)
     .map((a) => ({ payment_id: id, bank_id: a.bank_id, amount: a.amount }));
@@ -154,6 +174,12 @@ export async function payPayment(id: string, allocations: AllocationInput[]): Pr
     const { error: allocErr } = await supabase.from('payment_allocations').insert(rows);
     if (allocErr) throw allocErr;
   }
+  const { error } = await supabase.from('payments').update({ status: 'allocated' }).eq('id', id);
+  if (error) throw error;
+}
+
+/** Етап «Оплата»: проводить оплату allocated → paid (розбивка вже збережена). */
+export async function payPayment(id: string): Promise<void> {
   const { error } = await supabase.from('payments').update({ status: 'paid' }).eq('id', id);
   if (error) throw error;
 }
@@ -219,23 +245,32 @@ export async function listComments(paymentId: string): Promise<PaymentComment[]>
   return data ?? [];
 }
 
-export async function addComment(paymentId: string, authorId: string, text: string): Promise<void> {
+export async function addComment(
+  paymentId: string,
+  authorId: string,
+  text: string,
+  stage: Stage = 'discussion'
+): Promise<void> {
   const { error } = await supabase
     .from('payment_comments')
-    .insert({ payment_id: paymentId, author_id: authorId, text });
+    .insert({ payment_id: paymentId, author_id: authorId, text, stage });
   if (error) throw error;
 }
 
 const BUCKET = 'payment-files';
 
-export async function uploadAttachment(paymentId: string, file: File): Promise<void> {
+export async function uploadAttachment(
+  paymentId: string,
+  file: File,
+  stage: Stage = 'discussion'
+): Promise<void> {
   const safe = file.name.replace(/[^\w.\-()]+/g, '_');
   const path = `${paymentId}/${Date.now()}_${safe}`;
   const { error } = await supabase.storage.from(BUCKET).upload(path, file);
   if (error) throw error;
   const { error: e2 } = await supabase
     .from('payment_attachments')
-    .insert({ payment_id: paymentId, path, name: file.name });
+    .insert({ payment_id: paymentId, path, name: file.name, stage });
   if (e2) throw e2;
 }
 
