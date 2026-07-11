@@ -13,8 +13,8 @@ dist-ssr
 .DS_Store
 
 # Секрети та локальні env (у репо лише .env.example)
-.env
-.env.*
+.env*
 !.env.example
 
 supabase/.temp/
+supabase/.branches/

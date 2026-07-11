@@ -8,6 +8,7 @@ import { KanbanBoard, KanbanColumn } from '../components/ui/KanbanBoard';
 import { NewPaymentModal } from '../components/payments/NewPaymentModal';
 import { PaymentModal } from '../components/payments/PaymentModal';
 import { PaymentFiles } from '../components/payments/PaymentFiles';
+import { PaymentFilter } from '../components/payments/PaymentFilter';
 
 type Tab = 'requests' | 'files';
 
@@ -24,6 +25,8 @@ export function Payments() {
   const [tab, setTab] = useState<Tab>('requests');
   const [copied, setCopied] = useState(false);
   const [q, setQ] = useState('');
+  const [companyFilter, setCompanyFilter] = useState<string[]>([]);
+  const [statusFilter, setStatusFilter] = useState<PaymentStatus[]>([]);
 
   const copyLink = async () => {
     try {
@@ -73,7 +76,18 @@ export function Payments() {
       (v) => v.toLowerCase().includes(needle)
     );
   };
-  const visible = payments.filter(matches);
+
+  const passesFilter = (p: Payment): boolean => {
+    if (companyFilter.length && !(p.payer_company_id && companyFilter.includes(p.payer_company_id))) return false;
+    if (statusFilter.length && !statusFilter.includes(p.status)) return false;
+    return true;
+  };
+  const visible = payments.filter(matches).filter(passesFilter);
+
+  // Підприємства для фільтра — лише ті, що трапляються у заявках.
+  const filterCompanies = Object.values(companies)
+    .filter((c) => payments.some((p) => p.payer_company_id === c.id))
+    .sort((a, b) => a.name.localeCompare(b.name, 'uk'));
 
   const columns: KanbanColumn<Payment>[] = STATUS_COLUMNS.map((c) => ({
     key: c.status,
@@ -138,13 +152,22 @@ export function Payments() {
         <div className="text-gray-500">Завантаження...</div>
       ) : (
         <>
-        <div className="mb-4 relative max-w-sm">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Пошук за № рахунку, призначенням, підприємством…"
-            className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+        <div className="mb-4 flex items-center gap-2">
+          <div className="relative flex-1 max-w-sm">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Пошук за № рахунку, призначенням, підприємством…"
+              className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+            />
+          </div>
+          <PaymentFilter
+            companies={filterCompanies}
+            companyIds={companyFilter}
+            statuses={statusFilter}
+            onCompaniesChange={setCompanyFilter}
+            onStatusesChange={setStatusFilter}
           />
         </div>
         <KanbanBoard

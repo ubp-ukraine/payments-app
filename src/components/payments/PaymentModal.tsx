@@ -142,7 +142,6 @@ export function PaymentModal({ payment, users, companies, forms, onClose, onChan
   const [approvalNote, setApprovalNote] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [showComments, setShowComments] = useState(false);
 
   const [newComment, setNewComment] = useState('');
   const [commentFiles, setCommentFiles] = useState<File[]>([]);
@@ -477,7 +476,7 @@ export function PaymentModal({ payment, users, companies, forms, onClose, onChan
 
   const thread$ = (
     <>
-      <div className="flex-1 min-h-0 lg:overflow-y-auto space-y-2 pr-1">
+      <div className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1">
         {thread.map((item) =>
           item.kind === 'comment' ? (
             <div key={`c-${item.id}`} className="flex flex-col items-start">
@@ -547,18 +546,6 @@ export function PaymentModal({ payment, users, companies, forms, onClose, onChan
           </div>
           <div className="flex items-center gap-3 shrink-0">
             <span className="text-xl font-bold tabular-nums text-gray-900 whitespace-nowrap">{formatUAH(p.amount)}</span>
-            <button
-              onClick={() => setShowComments((v) => !v)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              <MessageSquare size={16} />
-              <span className="hidden sm:inline">Обговорення</span>
-              {thread.length > 0 && (
-                <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-brand-100 text-brand-700 text-[11px] font-bold">
-                  {thread.length}
-                </span>
-              )}
-            </button>
           </div>
         </div>
 
@@ -585,6 +572,14 @@ export function PaymentModal({ payment, users, companies, forms, onClose, onChan
                 <div>
                   <dt className="text-gray-400 text-xs">Номер рахунку</dt>
                   <dd className="text-gray-900">{p.invoice_number || '—'}</dd>
+                </div>
+                <div>
+                  <dt className="text-gray-400 text-xs">Назва ЮР особи</dt>
+                  <dd className="text-gray-900">{p.recipient || '—'}</dd>
+                </div>
+                <div>
+                  <dt className="text-gray-400 text-xs">ЄДРПОУ / ІПН</dt>
+                  <dd className="text-gray-900">{p.recipient_tax_id || '—'}</dd>
                 </div>
                 {p.purpose && (
                   <div className="col-span-2 md:col-span-4">
@@ -807,27 +802,19 @@ export function PaymentModal({ payment, users, companies, forms, onClose, onChan
           </ol>
         </div>
 
-        {/* Видвижна панель обговорення */}
-        {showComments && (
-          <div className="absolute inset-0 z-10 bg-black/20" onClick={() => setShowComments(false)} aria-hidden />
-        )}
-        <aside
-          className={`absolute top-0 right-0 z-20 h-full w-full sm:w-[400px] bg-white sm:border-l border-gray-200 sm:shadow-xl flex flex-col transform transition-transform duration-300 ${
-            showComments ? 'translate-x-0' : 'translate-x-full pointer-events-none'
-          }`}
-        >
-          <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-gray-100">
+        {/* Обговорення — завжди видиме, унизу модалки */}
+        <div className="shrink-0 flex flex-col border-t border-gray-200 pt-3 mt-2 max-h-[42%]">
+          <div className="shrink-0 flex items-center gap-2 mb-2">
+            <MessageSquare size={16} className="text-gray-500" />
             <span className="text-sm font-semibold text-gray-900">Обговорення</span>
-            <button
-              onClick={() => setShowComments(false)}
-              className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700"
-              aria-label="Закрити"
-            >
-              <X size={18} />
-            </button>
+            {thread.length > 0 && (
+              <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-brand-100 text-brand-700 text-[11px] font-bold">
+                {thread.length}
+              </span>
+            )}
           </div>
-          <div className="flex-1 min-h-0 flex flex-col p-4">{thread$}</div>
-        </aside>
+          {thread$}
+        </div>
       </div>
 
       {preview && <FilePreviewOverlay preview={preview} onClose={closePreview} />}

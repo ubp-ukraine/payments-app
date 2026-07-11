@@ -17,7 +17,13 @@ from ordered o
 where p.id = o.id;
 
 -- Продовжуємо лічильник із максимуму.
-select setval('public.payments_number_seq', coalesce((select max(number) from public.payments), 0));
+-- 3-арг форма: якщо таблиця порожня (max = null → 0), стартуємо з 1 і is_called=false,
+-- щоб перший nextval повернув 1 (setval із 0 недопустимий: мін. значення sequence = 1).
+select setval(
+  'public.payments_number_seq',
+  greatest(coalesce((select max(number) from public.payments), 0), 1),
+  coalesce((select max(number) from public.payments), 0) > 0
+);
 
 -- Нові рядки автоматично отримують номер.
 alter table public.payments alter column number set default nextval('public.payments_number_seq');

@@ -98,6 +98,8 @@ export interface NewPaymentInput {
   payment_form_id: string | null;
   importance: Importance | null;
   invoice_number: string | null;
+  recipient: string | null;
+  recipient_tax_id: string | null;
   purpose: string;
 }
 
@@ -126,6 +128,8 @@ export async function createPayment(authorId: string, input: NewPaymentInput): P
       payment_form_id: input.payment_form_id,
       importance: input.importance,
       invoice_number: input.invoice_number,
+      recipient: input.recipient,
+      recipient_tax_id: input.recipient_tax_id,
       purpose: input.purpose,
       status: 'pending',
     })

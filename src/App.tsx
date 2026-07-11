@@ -7,6 +7,7 @@ import { Reports } from './pages/Reports';
 import { Directories } from './pages/Directories';
 import { Users } from './pages/Users';
 import { SubmitPayment } from './pages/SubmitPayment';
+import { ZamovnykDashboard } from './pages/ZamovnykDashboard';
 import { defaultView, navForRole, SUBMIT_PATH, View } from './constants/domain';
 import { UserRole } from './types/database';
 
@@ -22,7 +23,7 @@ function AuthedApp({ role }: { role: UserRole }) {
   const render = () => {
     switch (active) {
       case 'payments':
-        return <Payments />;
+        return role === 'zamovnyk' ? <ZamovnykDashboard /> : <Payments />;
       case 'reports':
         return <Reports />;
       case 'directories':

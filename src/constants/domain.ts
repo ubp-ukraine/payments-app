@@ -107,7 +107,7 @@ export interface NavItem {
 export const NAV: NavItem[] = [
   { view: 'payments', label: 'Оплати', icon: Wallet, roles: ['zamovnyk', 'buhgalter', 'admin', 'fin_director'] },
   { view: 'reports', label: 'Звіти', icon: BarChart3, roles: ['buhgalter', 'admin', 'fin_director'] },
-  { view: 'directories', label: 'Довідники', icon: BookOpen, roles: ['admin'] },
+  { view: 'directories', label: 'Довідники', icon: BookOpen, roles: ['admin', 'fin_director'] },
   { view: 'users', label: 'Користувачі', icon: Users, roles: ['admin'] },
 ];
 

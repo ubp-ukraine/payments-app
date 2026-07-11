@@ -20,6 +20,8 @@ export function NewPaymentModal({ onClose, onCreated }: { onClose: () => void; o
   const [formId, setFormId] = useState('');
   const [importance, setImportance] = useState<Importance | ''>('');
   const [invoiceNumber, setInvoiceNumber] = useState('');
+  const [recipient, setRecipient] = useState('');
+  const [recipientTaxId, setRecipientTaxId] = useState('');
   const [purpose, setPurpose] = useState('');
   const [comment, setComment] = useState('');
   const [files, setFiles] = useState<File[]>([]);
@@ -46,6 +48,10 @@ export function NewPaymentModal({ onClose, onCreated }: { onClose: () => void; o
     if (!companyId) return setError('Оберіть підприємство-платника');
     if (!formId) return setError('Оберіть форму оплати');
     if (!importance) return setError('Оберіть важливість');
+    if (!invoiceNumber.trim()) return setError('Вкажіть номер рахунку');
+    if (!recipient.trim()) return setError('Вкажіть назву ЮР особи');
+    if (!/^\d{8,12}$/.test(recipientTaxId.trim()))
+      return setError('ЄДРПОУ/ІПН має містити 8–12 цифр');
     if (!purpose.trim()) return setError('Вкажіть, за що оплата');
     if (!user) return;
 
@@ -56,7 +62,9 @@ export function NewPaymentModal({ onClose, onCreated }: { onClose: () => void; o
         payer_company_id: companyId,
         payment_form_id: formId,
         importance,
-        invoice_number: invoiceNumber.trim() || null,
+        invoice_number: invoiceNumber.trim(),
+        recipient: recipient.trim(),
+        recipient_tax_id: recipientTaxId.trim(),
         purpose: purpose.trim(),
       });
       for (const file of files) {
@@ -93,7 +101,7 @@ export function NewPaymentModal({ onClose, onCreated }: { onClose: () => void; o
             />
           </div>
           <div>
-            <label className={labelCls}>Номер рахунку</label>
+            <label className={labelCls}>Номер рахунку *</label>
             <input
               className={inputCls}
               value={invoiceNumber}
@@ -125,6 +133,28 @@ export function NewPaymentModal({ onClose, onCreated }: { onClose: () => void; o
                 </option>
               ))}
             </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className={labelCls}>Назва ЮР особи *</label>
+            <input
+              className={inputCls}
+              value={recipient}
+              onChange={(e) => setRecipient(e.target.value)}
+              placeholder="напр. ТОВ «Ромашка»"
+            />
+          </div>
+          <div>
+            <label className={labelCls}>ЄДРПОУ / ІПН *</label>
+            <input
+              className={inputCls}
+              value={recipientTaxId}
+              onChange={(e) => setRecipientTaxId(e.target.value)}
+              inputMode="numeric"
+              placeholder="напр. 12345678"
+            />
           </div>
         </div>
 

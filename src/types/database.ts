@@ -44,6 +44,7 @@ export interface Payment {
   number: number | null;
   author_id: string;
   recipient: string | null;
+  recipient_tax_id: string | null;
   amount: number;
   payment_form: string | null;
   payer_company_id: string | null;
