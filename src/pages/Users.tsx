@@ -4,9 +4,11 @@ import { useAuth } from '../contexts/AuthContext';
 import { User, UserRole } from '../types/database';
 import { listUsers, registerUser, updateUserRole } from '../lib/api';
 import { ROLE_LABELS, ROLE_ORDER } from '../constants/domain';
-
-const inputCls =
-  'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500';
+import { ListBanner } from '../components/ui/ListBanner';
+import { Card, CardHeader, CardContent } from '../components/ui/Card';
+import { FormField, TextInput, Select } from '../components/ui/FormField';
+import { InfoBanner } from '../components/ui/InfoBanner';
+import { Button } from '../components/ui/Button';
 
 export function Users() {
   const { user: authUser } = useAuth();
@@ -76,78 +78,95 @@ export function Users() {
   };
 
   return (
-    <div className="max-w-3xl">
-      <h1 className="text-2xl font-bold text-gray-900 mb-1">Користувачі</h1>
-      <p className="text-gray-500 text-sm mb-5">Створюйте користувачів і призначайте ролі.</p>
+    <div className="max-w-3xl space-y-6">
+      <ListBanner
+        title="Користувачі"
+        subtitle="Створюйте користувачів і призначайте ролі."
+        compact
+      />
 
-      <form onSubmit={create} className="bg-white border border-gray-200 rounded-xl p-4 mb-6">
-        <div className="flex items-center gap-2 mb-3 text-gray-900 font-semibold">
-          <UserPlus size={17} className="text-brand-600" />
-          Новий користувач
-        </div>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2 text-gray-900 font-semibold">
+            <UserPlus size={17} className="text-brand-600" />
+            Новий користувач
+          </div>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={create} className="space-y-4">
+            {error && (
+              <InfoBanner tone="danger">{error}</InfoBanner>
+            )}
+            {ok && (
+              <InfoBanner tone="success">{ok}</InfoBanner>
+            )}
 
-        {error && <div className="mb-3 p-2 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm">{error}</div>}
-        {ok && <div className="mb-3 p-2 bg-green-50 border border-green-200 rounded-lg text-green-800 text-sm">{ok}</div>}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <FormField label="Email">
+                <TextInput
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="email@example.com"
+                />
+              </FormField>
+              <FormField label="Пароль">
+                <TextInput
+                  type="text"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="мінімум 6 символів"
+                />
+              </FormField>
+              <FormField label="Ім'я">
+                <TextInput
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Прізвище Імʼя"
+                />
+              </FormField>
+              <FormField label="Роль">
+                <Select value={role} onChange={(e) => setRole(e.target.value as UserRole)}>
+                  {ROLE_ORDER.map((r) => (
+                    <option key={r} value={r}>
+                      {ROLE_LABELS[r]}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+            </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Email</label>
-            <input className={inputCls} type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@example.com" />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Пароль</label>
-            <input className={inputCls} type="text" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="мінімум 6 символів" />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Ім'я</label>
-            <input className={inputCls} value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Прізвище Імʼя" />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Роль</label>
-            <select className={inputCls} value={role} onChange={(e) => setRole(e.target.value as UserRole)}>
-              {ROLE_ORDER.map((r) => (
-                <option key={r} value={r}>
-                  {ROLE_LABELS[r]}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="mt-3">
-          <button
-            type="submit"
-            disabled={creating}
-            className="px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-medium hover:bg-brand-700 disabled:opacity-60"
-          >
-            {creating ? 'Створення...' : 'Створити користувача'}
-          </button>
-        </div>
-      </form>
+            <Button type="submit" disabled={creating}>
+              {creating ? 'Створення...' : 'Створити користувача'}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
 
       {loading ? (
         <div className="text-gray-500">Завантаження...</div>
       ) : (
         <div className="space-y-2">
           {users.map((u) => (
-            <div key={u.id} className="bg-white border border-gray-200 rounded-xl px-4 py-3 flex items-center gap-3">
+            <Card key={u.id} className="px-4 py-3 flex items-center gap-3">
               <div className="flex-1 min-w-0">
                 <div className="font-medium text-gray-900 truncate">{u.full_name || u.email}</div>
                 <div className="text-xs text-gray-500 truncate">{u.email}</div>
               </div>
-              <select
-                className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-60"
-                value={u.role ?? 'zamovnyk'}
-                disabled={busy === u.id || u.id === authUser?.id}
-                onChange={(e) => changeRole(u.id, e.target.value as UserRole)}
-              >
-                {ROLE_ORDER.map((r) => (
-                  <option key={r} value={r}>
-                    {ROLE_LABELS[r]}
-                  </option>
-                ))}
-              </select>
-            </div>
+              <div className="w-44 sm:w-48 shrink-0">
+                <Select
+                  value={u.role ?? 'zamovnyk'}
+                  disabled={busy === u.id || u.id === authUser?.id}
+                  onChange={(e) => changeRole(u.id, e.target.value as UserRole)}
+                >
+                  {ROLE_ORDER.map((r) => (
+                    <option key={r} value={r}>
+                      {ROLE_LABELS[r]}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            </Card>
           ))}
         </div>
       )}

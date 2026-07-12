@@ -5,6 +5,11 @@ import { DirectoryRow, Payment, PaymentAllocation, User } from '../types/databas
 import { dirMap, listAllAllocations, listPayments, usersMap } from '../lib/api';
 import { formatDate, formatPaymentNo, formatUAH } from '../constants/domain';
 import { PaymentModal } from '../components/payments/PaymentModal';
+import { ListBanner } from '../components/ui/ListBanner';
+import { Card } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
+import { FormField, TextInput } from '../components/ui/FormField';
+import { Badge } from '../components/ui/Badge';
 
 interface AllocRow {
   allocId: string;
@@ -83,8 +88,9 @@ export function Reports() {
     for (const a of allocations) {
       const payment = payments[a.payment_id];
       if (!payment) continue;
-      // Лише фактично проведені оплати (розподілені, але ще не оплачені — не рахуємо).
-      if (payment.status !== 'paid') continue;
+      // Лише фактично оплачені заявки (розбивка по банках зʼявляється вже після
+      // оплати, у стані 'allocated'; неоплачені або ще нерозподілені сюди не потраплять).
+      if (!payment.paid_at) continue;
       if (!inRange(payment.paid_at)) continue;
       if (iq && !(payment.invoice_number || '').toLowerCase().includes(iq)) continue;
       const amount = Number(a.amount);
@@ -111,7 +117,7 @@ export function Reports() {
   }, [allocations, payments, banks, from, to, invoiceQ]);
 
   const anyPaid = useMemo(
-    () => allocations.some((a) => payments[a.payment_id]?.status === 'paid'),
+    () => allocations.some((a) => payments[a.payment_id]?.paid_at != null),
     [allocations, payments]
   );
 
@@ -162,49 +168,70 @@ export function Reports() {
     setInvoiceQ('');
   };
 
-  const inputCls =
-    'px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500';
-
   return (
-    <div className="max-w-4xl">
-      <h1 className="text-2xl font-bold text-gray-900 mb-1">Звіти</h1>
-      <p className="text-gray-500 text-sm mb-5">
-        Скільки грошей проведено через кожен банк (за оплаченими заявками). Період — за датою оплати.
-      </p>
+    <div className="max-w-4xl space-y-5">
+      <ListBanner
+        title="Звіти"
+        subtitle="Скільки грошей проведено через кожен банк (за оплаченими заявками). Період — за датою оплати."
+      />
 
-      <div className="flex flex-wrap items-end gap-3 mb-5 bg-white border border-gray-200 rounded-xl p-3">
-        <div>
-          <label className="block text-[11px] text-gray-400 mb-1">Період з</label>
-          <input type="date" className={inputCls} value={from} onChange={(e) => setFrom(e.target.value)} max={to || undefined} />
+      <Card className="p-4">
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="w-40">
+          <FormField label="Період з" htmlFor="rep-from">
+            <TextInput
+              id="rep-from"
+              type="date"
+              value={from}
+              onChange={(e) => setFrom(e.target.value)}
+              max={to || undefined}
+            />
+          </FormField>
+          </div>
+          <div className="w-40">
+          <FormField label="по" htmlFor="rep-to">
+            <TextInput
+              id="rep-to"
+              type="date"
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+              min={from || undefined}
+            />
+          </FormField>
+          </div>
+          <div className="w-56">
+          <FormField label="Номер рахунку" htmlFor="rep-invoice">
+            <TextInput
+              id="rep-invoice"
+              value={invoiceQ}
+              onChange={(e) => setInvoiceQ(e.target.value)}
+              placeholder="Пошук за № рахунку…"
+            />
+          </FormField>
+          </div>
+          <Button variant="outline" onClick={setThisMonth}>
+            Цей місяць
+          </Button>
+          {(from || to || invoiceQ) && (
+            <Button variant="ghost" onClick={clearPeriod}>
+              Очистити
+            </Button>
+          )}
         </div>
-        <div>
-          <label className="block text-[11px] text-gray-400 mb-1">по</label>
-          <input type="date" className={inputCls} value={to} onChange={(e) => setTo(e.target.value)} min={from || undefined} />
-        </div>
-        <div>
-          <label className="block text-[11px] text-gray-400 mb-1">Номер рахунку</label>
-          <input className={inputCls} value={invoiceQ} onChange={(e) => setInvoiceQ(e.target.value)} placeholder="Пошук за № рахунку…" />
-        </div>
-        <button onClick={setThisMonth} className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50">
-          Цей місяць
-        </button>
-        {(from || to || invoiceQ) && (
-          <button onClick={clearPeriod} className="px-3 py-1.5 rounded-lg text-sm text-gray-500 hover:text-gray-800">
-            Очистити
-          </button>
-        )}
-      </div>
+      </Card>
 
       {loading ? (
         <div className="text-gray-500">Завантаження...</div>
       ) : groups.length === 0 ? (
-        <div className="bg-white border border-gray-200 rounded-xl p-10 text-center text-gray-500">
+        <Card className="border-dashed p-10 text-center text-gray-500">
           {!anyPaid ? 'Ще немає проведених оплат.' : 'За вибраними фільтрами оплат немає.'}
-        </div>
+        </Card>
       ) : (
         <div className="space-y-4">
-          <div className="bg-brand-600 text-white rounded-xl p-5">
-            <div className="text-sm text-brand-100">Усього проведено · {periodLabel}</div>
+          <div className="bg-brand-600 text-white rounded-xl shadow-sm p-5">
+            <div className="text-xs uppercase tracking-wide text-brand-100">
+              Усього проведено · {periodLabel}
+            </div>
             <div className="text-3xl font-bold tabular-nums mt-1">{formatUAH(total)}</div>
           </div>
 
@@ -212,12 +239,12 @@ export function Reports() {
             {groups.map((g) => {
               const isOpen = open[g.id];
               return (
-                <div key={g.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                <Card key={g.id} className="overflow-hidden">
                   <div className="p-4">
                     <div className="flex items-center justify-between gap-3 mb-2">
                       <button
                         onClick={() => setOpen((o) => ({ ...o, [g.id]: !o[g.id] }))}
-                        className="flex items-center gap-1.5 font-semibold text-gray-900 hover:text-brand-700"
+                        className="flex items-center gap-1.5 font-semibold text-gray-900 hover:text-brand-700 transition-colors"
                       >
                         {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                         {g.name}
@@ -229,14 +256,10 @@ export function Reports() {
                             {g.count} {g.count === 1 ? 'оплата' : 'оплат'} · {total ? Math.round((g.sum / total) * 100) : 0}%
                           </div>
                         </div>
-                        <button
-                          onClick={() => exportBank(g)}
-                          title="Експорт у Excel"
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                        >
+                        <Button variant="outline" size="sm" onClick={() => exportBank(g)} title="Експорт у Excel">
                           <Download size={15} />
                           Excel
-                        </button>
+                        </Button>
                       </div>
                     </div>
                     <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
@@ -254,16 +277,18 @@ export function Reports() {
                         >
                           <div className="min-w-0">
                             <div className="flex items-center gap-2 text-sm">
-                              <span className="font-mono text-xs text-brand-700">{formatPaymentNo(r.payment.number)}</span>
+                              <Badge variant="brand" className="font-mono">
+                                {formatPaymentNo(r.payment.number)}
+                              </Badge>
                               <span className="text-gray-400 text-xs">{formatDate(r.paidAt)}</span>
                             </div>
-                            <div className="text-sm text-gray-800 truncate">
+                            <div className="text-sm text-gray-800 truncate mt-1">
                               {r.payment.purpose || companyName(r.payment) || 'Заявка'}
                             </div>
                           </div>
                           <div className="text-right shrink-0">
                             <div className="font-semibold tabular-nums text-gray-900">{formatUAH(r.allocAmount)}</div>
-                            <div className="text-[11px] text-gray-400">
+                            <div className="text-[11px] text-gray-400 tabular-nums">
                               частка {Math.round(r.sharePct)}% · платіж {formatUAH(Number(r.payment.amount))}
                             </div>
                           </div>
@@ -271,7 +296,7 @@ export function Reports() {
                       ))}
                     </div>
                   )}
-                </div>
+                </Card>
               );
             })}
           </div>

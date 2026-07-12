@@ -28,13 +28,13 @@ export const STATUS_META: Record<PaymentStatus, StatusMeta> = {
     pill: 'bg-blue-50 text-blue-700 border-blue-200',
     dot: 'bg-blue-500',
   },
-  allocated: {
-    label: 'Розподілено',
+  paid: {
+    label: 'Оплачено',
     pill: 'bg-violet-50 text-violet-700 border-violet-200',
     dot: 'bg-violet-500',
   },
-  paid: {
-    label: 'Оплачено',
+  allocated: {
+    label: 'Розподілено',
     pill: 'bg-green-50 text-green-700 border-green-200',
     dot: 'bg-green-500',
   },
@@ -116,14 +116,14 @@ export function navForRole(role: UserRole | null): NavItem[] {
   return NAV.filter((item) => item.roles.includes(role));
 }
 
-export function defaultView(_role: UserRole | null): View {
+export function defaultView(): View {
   return 'payments';
 }
 
 export const STATUS_COLUMNS: { status: PaymentStatus; label: string; headerBg: string; color: string }[] = [
   { status: 'pending', label: 'На погодженні', headerBg: 'bg-amber-100', color: 'text-amber-700' },
-  { status: 'approved', label: 'Погоджено · до розподілу', headerBg: 'bg-blue-100', color: 'text-blue-700' },
-  { status: 'allocated', label: 'До оплати', headerBg: 'bg-violet-100', color: 'text-violet-700' },
-  { status: 'paid', label: 'Оплачено', headerBg: 'bg-green-100', color: 'text-green-700' },
+  { status: 'approved', label: 'Погоджено · до оплати', headerBg: 'bg-blue-100', color: 'text-blue-700' },
+  { status: 'paid', label: 'Оплачено · до розподілу', headerBg: 'bg-violet-100', color: 'text-violet-700' },
+  { status: 'allocated', label: 'Розподілено', headerBg: 'bg-green-100', color: 'text-green-700' },
   { status: 'rejected', label: 'Відхилено', headerBg: 'bg-red-100', color: 'text-red-700' },
 ];

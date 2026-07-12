@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { NavItem, ROLE_LABELS, View } from '../../constants/domain';
+import { ThemeToggle } from '../ui/ThemeToggle';
 
 interface LayoutProps {
   nav: NavItem[];
@@ -80,6 +81,7 @@ export function Layout({ nav, active, onNavigate, children }: LayoutProps) {
         </div>
 
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           {profile && (
             <div className="hidden sm:flex items-center gap-2.5 mr-1">
               <div className="text-right">

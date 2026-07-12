@@ -28,11 +28,11 @@ export function KanbanBoard<T>({
       {columns.map((col) => (
         <div
           key={col.key}
-          className={`flex-shrink-0 ${columnClassName} flex flex-col rounded-xl border border-gray-200 bg-gray-50 overflow-hidden`}
+          className={`flex-shrink-0 ${columnClassName} flex flex-col rounded-xl border border-gray-200 bg-slate-50 shadow-sm overflow-hidden`}
         >
           <div className={`px-4 py-3 ${col.headerBg} border-b border-gray-200 shrink-0 flex items-center justify-between gap-2`}>
             <span className={`text-sm font-semibold ${col.color} leading-snug`}>{col.label}</span>
-            <span className={`inline-flex items-center justify-center min-w-[22px] h-5 px-1.5 rounded-full text-xs font-bold bg-white ${col.color}`}>
+            <span className={`inline-flex items-center justify-center min-w-[22px] h-5 px-1.5 rounded-full text-xs font-bold tabular-nums bg-white ${col.color}`}>
               {col.items.length}
             </span>
           </div>

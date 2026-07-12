@@ -15,10 +15,10 @@ const isSubmitPath = (p: string) => p === SUBMIT_PATH || p === SUBMIT_PATH + '/'
 
 function AuthedApp({ role }: { role: UserRole }) {
   const nav = navForRole(role);
-  const [view, setView] = useState<View>(defaultView(role));
+  const [view, setView] = useState<View>(defaultView());
 
   const allowed = nav.some((n) => n.view === view);
-  const active: View = allowed ? view : defaultView(role);
+  const active: View = allowed ? view : defaultView();
 
   const render = () => {
     switch (active) {

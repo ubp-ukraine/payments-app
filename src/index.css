@@ -1,3 +1,51 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  body {
+    @apply bg-slate-50 text-gray-900;
+  }
+}
+
+@layer utilities {
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* thin custom scrollbars */
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  @apply bg-gray-200 rounded-full;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Dark theme via filter invert. Applied by class on <html>. */
+html.theme-dark {
+  filter: invert(0.92) hue-rotate(180deg) saturate(0.9);
+  background: #1a1a1a;
+}
+html.theme-dark img,
+html.theme-dark video,
+html.theme-dark canvas,
+html.theme-dark svg.no-invert,
+html.theme-dark .no-invert {
+  filter: invert(1) hue-rotate(180deg);
+}

@@ -11,10 +11,13 @@ import {
   SUBMIT_PATH,
 } from '../constants/domain';
 import { KanbanBoard, KanbanColumn } from '../components/ui/KanbanBoard';
-import { StatusPill } from '../components/ui/StatusPill';
+import { Button } from '../components/ui/Button';
+import { ListBanner } from '../components/ui/ListBanner';
+import { SegmentedToggle } from '../components/ui/SegmentedToggle';
 import { NewPaymentModal } from '../components/payments/NewPaymentModal';
 import { PaymentModal } from '../components/payments/PaymentModal';
 import { PaymentFilter } from '../components/payments/PaymentFilter';
+import { StatusSectionList } from '../components/payments/StatusSectionList';
 
 type ViewMode = 'list' | 'board';
 const VIEW_KEY = 'oplaty_zamovnyk_view';
@@ -23,15 +26,17 @@ const VIEW_KEY = 'oplaty_zamovnyk_view';
 // що подано, що чекає погодження й що вже оплачено.
 type Filter = 'all' | 'pending' | 'in_progress' | 'paid' | 'rejected';
 
-const inProgress = (s: PaymentStatus) => s === 'approved' || s === 'allocated';
+// Для замовника «оплачено» = гроші вийшли (paid) або вже розподілено (allocated);
+// «в роботі» = погоджено й чекає на оплату (approved).
+const isPaidGroup = (s: PaymentStatus) => s === 'paid' || s === 'allocated';
 
 type TileKey = 'pending' | 'in_progress' | 'paid' | 'rejected';
 
 // Кожна плитка — швидкий вибір групи статусів для кнопки «Фільтр».
 const GROUP_STATUSES: Record<TileKey, PaymentStatus[]> = {
   pending: ['pending'],
-  in_progress: ['approved', 'allocated'],
-  paid: ['paid'],
+  in_progress: ['approved'],
+  paid: ['paid', 'allocated'],
   rejected: ['rejected'],
 };
 
@@ -44,16 +49,15 @@ interface TileDef {
   key: TileKey;
   label: string;
   icon: typeof Clock;
-  ring: string;
   iconCls: string;
   accent: string;
 }
 
 const TILES: TileDef[] = [
-  { key: 'pending', label: 'В очікуванні', icon: Clock, ring: 'hover:border-amber-300', iconCls: 'bg-amber-50 text-amber-600', accent: 'text-amber-700' },
-  { key: 'in_progress', label: 'В роботі', icon: Loader2, ring: 'hover:border-blue-300', iconCls: 'bg-blue-50 text-blue-600', accent: 'text-blue-700' },
-  { key: 'paid', label: 'Оплачено', icon: Wallet, ring: 'hover:border-green-300', iconCls: 'bg-green-50 text-green-600', accent: 'text-green-700' },
-  { key: 'rejected', label: 'Відхилено', icon: XCircle, ring: 'hover:border-red-300', iconCls: 'bg-red-50 text-red-600', accent: 'text-red-700' },
+  { key: 'pending', label: 'В очікуванні', icon: Clock, iconCls: 'bg-amber-50 text-amber-600', accent: 'text-amber-700' },
+  { key: 'in_progress', label: 'В роботі', icon: Loader2, iconCls: 'bg-blue-50 text-blue-600', accent: 'text-blue-700' },
+  { key: 'paid', label: 'Оплачено', icon: Wallet, iconCls: 'bg-green-50 text-green-600', accent: 'text-green-700' },
+  { key: 'rejected', label: 'Відхилено', icon: XCircle, iconCls: 'bg-red-50 text-red-600', accent: 'text-red-700' },
 ];
 
 export function ZamovnykDashboard() {
@@ -113,8 +117,8 @@ export function ZamovnykDashboard() {
     const by: Record<Filter, Payment[]> = { all: payments, pending: [], in_progress: [], paid: [], rejected: [] };
     for (const p of payments) {
       if (p.status === 'pending') by.pending.push(p);
-      else if (inProgress(p.status)) by.in_progress.push(p);
-      else if (p.status === 'paid') by.paid.push(p);
+      else if (p.status === 'approved') by.in_progress.push(p);
+      else if (isPaidGroup(p.status)) by.paid.push(p);
       else if (p.status === 'rejected') by.rejected.push(p);
     }
     return by;
@@ -151,32 +155,38 @@ export function ZamovnykDashboard() {
 
   return (
     <div>
-      <div className="flex items-start justify-between mb-5 gap-3 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Мої заявки</h1>
-          <p className="text-gray-500 text-sm">Стежте за поданими заявками та станом їх погодження й оплати.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={copyLink}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            title="Скопіювати посилання на форму подачі оплати"
-          >
-            {copied ? <Check size={16} className="text-green-600" /> : <Link2 size={16} />}
-            {copied ? 'Скопійовано' : 'Поділитися формою'}
-          </button>
-          <button
-            onClick={() => setShowNew(true)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-medium hover:bg-brand-700"
-          >
-            <Plus size={16} />
-            Нова заявка
-          </button>
-        </div>
-      </div>
+      <ListBanner
+        title="Мої заявки"
+        subtitle="Стежте за поданими заявками та станом їх погодження й оплати."
+        actions={
+          <div className="flex items-center gap-2 flex-wrap">
+            <SegmentedToggle<ViewMode>
+              tone="onDark"
+              value={mode}
+              onChange={setMode}
+              options={[
+                { value: 'list', label: 'Список', icon: List },
+                { value: 'board', label: 'Канбан', icon: KanbanSquare },
+              ]}
+            />
+            <Button
+              variant="outline"
+              onClick={copyLink}
+              title="Скопіювати посилання на форму подачі оплати"
+            >
+              {copied ? <Check size={16} className="text-green-600" /> : <Link2 size={16} />}
+              {copied ? 'Скопійовано' : 'Поділитися формою'}
+            </Button>
+            <Button variant="primary" onClick={() => setShowNew(true)}>
+              <Plus size={16} />
+              Нова заявка
+            </Button>
+          </div>
+        }
+      />
 
       {/* HUD — плитки по групах, клік фільтрує список */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-6 mb-6">
         {TILES.map((t) => {
           const rows = counts[t.key];
           const Icon = t.icon;
@@ -188,24 +198,24 @@ export function ZamovnykDashboard() {
                 setStatusSel(GROUP_STATUSES[t.key]);
                 setMode('list');
               }}
-              className={`text-left bg-white border rounded-xl p-4 transition-all ${t.ring} ${
+              className={`text-left bg-white rounded-xl border p-5 hover:shadow-md transition-shadow ${
                 isActive ? 'border-brand-400 ring-1 ring-brand-200' : 'border-gray-200'
               }`}
             >
-              <div className="flex items-center justify-between">
-                <span className={`inline-flex items-center justify-center w-8 h-8 rounded-lg ${t.iconCls}`}>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs uppercase tracking-wide text-gray-500">{t.label}</span>
+                <span className={`p-2.5 rounded-lg ${t.iconCls}`}>
                   <Icon size={17} />
                 </span>
-                <span className={`text-2xl font-bold tabular-nums ${t.accent}`}>{rows.length}</span>
               </div>
-              <div className="mt-2 text-sm font-medium text-gray-700">{t.label}</div>
-              <div className="text-xs text-gray-400 tabular-nums">{formatUAH(sum(rows))}</div>
+              <div className={`mt-3 text-3xl font-bold tabular-nums ${t.accent}`}>{rows.length}</div>
+              <div className="text-xs text-gray-400 tabular-nums mt-1">{formatUAH(sum(rows))}</div>
             </button>
           );
         })}
       </div>
 
-      {/* Кнопка «Фільтр» (статус + підприємство) + перемикач вигляду */}
+      {/* Кнопка «Фільтр» (статус + підприємство) */}
       <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
         <PaymentFilter
           companies={filterCompanies}
@@ -214,27 +224,6 @@ export function ZamovnykDashboard() {
           onCompaniesChange={setCompanyFilter}
           onStatusesChange={setStatusSel}
         />
-        <div className="inline-flex rounded-lg border border-gray-200 bg-white p-0.5 shrink-0">
-          {([
-            { key: 'list' as ViewMode, label: 'Список', icon: List },
-            { key: 'board' as ViewMode, label: 'Канбан', icon: KanbanSquare },
-          ]).map((v) => {
-            const Icon = v.icon;
-            const isActive = mode === v.key;
-            return (
-              <button
-                key={v.key}
-                onClick={() => setMode(v.key)}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                  isActive ? 'bg-brand-600 text-white' : 'text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                <Icon size={15} />
-                {v.label}
-              </button>
-            );
-          })}
-        </div>
       </div>
 
       <div className="mb-4 relative max-w-sm">
@@ -243,7 +232,7 @@ export function ZamovnykDashboard() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Пошук за № рахунку, призначенням, підприємством…"
-          className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+          className="w-full pl-9 pr-3 py-2 bg-white border border-stone-200 rounded-lg text-sm transition-colors focus:outline-none focus:border-stone-900 focus:ring-4 focus:ring-stone-900/5"
         />
       </div>
 
@@ -286,31 +275,38 @@ export function ZamovnykDashboard() {
         <div className="bg-white border border-dashed border-gray-300 rounded-xl p-10 text-center">
           <p className="text-gray-500 text-sm">У цій групі поки що немає заявок.</p>
           {payments.length === 0 && (
-            <button
-              onClick={() => setShowNew(true)}
-              className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-medium hover:bg-brand-700"
-            >
-              <Plus size={16} />
-              Створити першу заявку
-            </button>
+            <div className="mt-3 flex justify-center">
+              <Button variant="primary" onClick={() => setShowNew(true)}>
+                <Plus size={16} />
+                Створити першу заявку
+              </Button>
+            </div>
           )}
         </div>
       ) : (
-        <div className="space-y-2">
-          {visible.map((p) => {
+        <StatusSectionList
+          sections={STATUS_COLUMNS.filter(
+            (c) => statusSel.length === 0 || statusSel.includes(c.status)
+          ).map((c) => ({
+            status: c.status,
+            label: c.label,
+            color: c.color,
+            headerBg: c.headerBg,
+            items: searched.filter((p) => p.status === c.status),
+          }))}
+          storageKey="oplaty_zamovnyk_collapsed"
+          renderItem={(p) => {
             const company = p.payer_company_id ? companies[p.payer_company_id]?.name : null;
             const form = p.payment_form_id ? forms[p.payment_form_id]?.name : p.payment_form;
             const imp = IMPORTANCE_OPTIONS.find((o) => o.value === p.importance);
             return (
               <button
-                key={p.id}
                 onClick={() => setSelected(p)}
-                className="w-full text-left flex items-center gap-4 bg-white border border-gray-200 rounded-xl px-4 py-3 hover:border-brand-300 hover:shadow-sm transition-all"
+                className="w-full text-left flex items-center gap-4 px-4 py-3 hover:bg-gray-50 transition-colors"
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-mono text-[11px] text-gray-400">{formatPaymentNo(p.number)}</span>
-                    <StatusPill status={p.status} />
                     {imp && (
                       <span className={`inline-flex items-center rounded-md border text-[11px] font-semibold px-2 py-0.5 ${imp.className}`}>
                         {imp.label}
@@ -335,8 +331,8 @@ export function ZamovnykDashboard() {
                 </div>
               </button>
             );
-          })}
-        </div>
+          }}
+        />
       )}
 
       {showNew && (

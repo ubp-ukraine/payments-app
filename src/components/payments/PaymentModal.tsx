@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState } from 'react';
-import { Check, FileText, MessageSquare, Paperclip, Upload, X } from 'lucide-react';
+import { AlertCircle, Check, FileText, MessageSquare, Paperclip, Upload, X } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   DirectoryRow,
@@ -31,6 +31,10 @@ import {
 import { formatDateTime, formatPaymentNo, formatUAH, IMPORTANCE_LABELS } from '../../constants/domain';
 import { Modal } from '../ui/Modal';
 import { StatusPill } from '../ui/StatusPill';
+import { Button } from '../ui/Button';
+import { Badge } from '../ui/Badge';
+import { InfoBanner } from '../ui/InfoBanner';
+import { TextInput, TextArea } from '../ui/FormField';
 import { fileKind, useFilePreview, useThumbnails } from './attachments';
 import { FilePreviewOverlay } from './FilePreviewOverlay';
 
@@ -42,17 +46,20 @@ type ThreadItem =
 type BlockState = 'done' | 'active' | 'pending' | 'rejected';
 
 function StageBadge({ state }: { state: BlockState }) {
-  const map: Record<BlockState, { label: string; cls: string }> = {
-    done: { label: 'Виконано', cls: 'border-green-200 bg-green-50 text-green-700' },
-    active: { label: 'Поточний крок', cls: 'border-brand-200 bg-brand-50 text-brand-700' },
-    rejected: { label: 'Відхилено', cls: 'border-red-200 bg-red-50 text-red-700' },
-    pending: { label: 'Очікує', cls: 'border-gray-200 bg-gray-50 text-gray-400' },
+  const map: Record<
+    BlockState,
+    { label: string; variant: 'success' | 'brand' | 'danger' | 'muted' }
+  > = {
+    done: { label: 'Виконано', variant: 'success' },
+    active: { label: 'Поточний крок', variant: 'brand' },
+    rejected: { label: 'Відхилено', variant: 'danger' },
+    pending: { label: 'Очікує', variant: 'muted' },
   };
   const m = map[state];
   return (
-    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap ${m.cls}`}>
+    <Badge variant={m.variant} className="whitespace-nowrap">
       {m.label}
-    </span>
+    </Badge>
   );
 }
 
@@ -336,11 +343,12 @@ export function PaymentModal({ payment, users, companies, forms, onClose, onChan
   // Стан блоків залежно від статусу заявки.
   const b1: BlockState = 'done';
   const b2: BlockState = s === 'pending' ? 'active' : s === 'rejected' ? 'rejected' : 'done';
-  const b3: BlockState = s === 'approved' ? 'active' : s === 'allocated' || s === 'paid' ? 'done' : 'pending';
-  const b4: BlockState = s === 'allocated' ? 'active' : s === 'paid' ? 'done' : 'pending';
+  // Блок 3 = Оплата (active при approved), Блок 4 = Розподіл (active при paid).
+  const b3: BlockState = s === 'approved' ? 'active' : s === 'paid' || s === 'allocated' ? 'done' : 'pending';
+  const b4: BlockState = s === 'paid' ? 'active' : s === 'allocated' ? 'done' : 'pending';
 
-  const editAllocation = canPay && (s === 'approved' || s === 'allocated');
-  const editTypes = canPay && s !== 'pending' && s !== 'rejected';
+  const editAllocation = canPay && (s === 'paid' || s === 'allocated');
+  const editTypes = canPay && (s === 'paid' || s === 'allocated');
 
   // Розподіл видимий і для деактивованих банків, що вже мають суму (щоб можна було виправити).
   const activeBanks = banks.filter((b) => b.is_active);
@@ -418,50 +426,49 @@ export function PaymentModal({ payment, users, companies, forms, onClose, onChan
       {types.map((t) => (
         <div key={t.id} className="flex items-center gap-3">
           <div className="flex-1 text-sm text-gray-700">{t.name}</div>
-          <input
-            className="w-32 px-3 py-1.5 border border-gray-300 rounded-lg text-sm text-right tabular-nums focus:outline-none focus:ring-2 focus:ring-brand-500"
-            inputMode="decimal"
-            placeholder="0,00"
-            value={typeAlloc[t.id] ?? ''}
-            onChange={(e) => setTypeAlloc((a) => ({ ...a, [t.id]: e.target.value }))}
-          />
+          <div className="w-32">
+            <TextInput
+              className="text-right tabular-nums"
+              inputMode="decimal"
+              placeholder="0,00"
+              value={typeAlloc[t.id] ?? ''}
+              onChange={(e) => setTypeAlloc((a) => ({ ...a, [t.id]: e.target.value }))}
+            />
+          </div>
         </div>
       ))}
       {types.length === 0 && <div className="text-sm text-gray-400">Ще немає типів. Додайте новий нижче.</div>}
       <div className="flex items-center gap-2 pt-1">
-        <input
-          className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-          placeholder="Новий тип…"
-          value={newTypeName}
-          onChange={(e) => setNewTypeName(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              addType();
-            }
-          }}
-        />
-        <button
+        <div className="flex-1">
+          <TextInput
+            placeholder="Новий тип…"
+            value={newTypeName}
+            onChange={(e) => setNewTypeName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                addType();
+              }
+            }}
+          />
+        </div>
+        <Button
           type="button"
+          variant="outline"
           onClick={addType}
           disabled={!newTypeName.trim()}
-          className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 whitespace-nowrap"
+          className="whitespace-nowrap"
         >
           Додати тип
-        </button>
+        </Button>
       </div>
       <div className="flex items-center justify-between pt-2">
         <span className={`text-sm font-medium ${typeMatch ? 'text-green-700' : 'text-gray-500'}`}>
           Розподілено: <span className="tabular-nums">{formatUAH(typeTotal)}</span> / {formatUAH(p.amount)}
         </span>
-        <button
-          type="button"
-          disabled={savingTypes}
-          onClick={saveTypes}
-          className="px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-medium hover:bg-brand-700 disabled:opacity-50"
-        >
+        <Button type="button" disabled={savingTypes} onClick={saveTypes}>
           {savingTypes ? 'Збереження…' : 'Зберегти типи'}
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -495,8 +502,8 @@ export function PaymentModal({ payment, users, companies, forms, onClose, onChan
       </div>
 
       <div className="shrink-0 pt-2 mt-2 border-t border-gray-100 space-y-2">
-        <textarea
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none"
+        <TextArea
+          className="resize-none"
           rows={2}
           placeholder="Додати коментар…"
           value={newComment}
@@ -509,14 +516,13 @@ export function PaymentModal({ payment, users, companies, forms, onClose, onChan
             <span>Прикріпити файл</span>
             <input type="file" multiple className="hidden" onChange={(e) => addFiles(e.target.files)} />
           </label>
-          <button
+          <Button
             type="button"
             disabled={posting || (!newComment.trim() && commentFiles.length === 0)}
             onClick={postComment}
-            className="px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-medium hover:bg-brand-700 disabled:opacity-50"
           >
             {posting ? 'Надсилання…' : 'Додати'}
-          </button>
+          </Button>
         </div>
       </div>
     </>
@@ -549,7 +555,13 @@ export function PaymentModal({ payment, users, companies, forms, onClose, onChan
           </div>
         </div>
 
-        {error && <div className="shrink-0 mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm">{error}</div>}
+        {error && (
+          <div className="shrink-0 mt-3">
+            <InfoBanner tone="danger" icon={AlertCircle}>
+              {error}
+            </InfoBanner>
+          </div>
+        )}
 
         {/* Блоки на всю ширину модалки, з окремим прокрутом */}
         <div className="flex-1 min-h-0 overflow-y-auto pt-4 pr-1">
@@ -616,27 +628,18 @@ export function PaymentModal({ payment, users, companies, forms, onClose, onChan
             >
               {b2 === 'active' && canApprove && (
                 <div className="space-y-2">
-                  <input
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  <TextInput
                     placeholder="Коментар (обовʼязковий при відхиленні)"
                     value={approvalNote}
                     onChange={(e) => setApprovalNote(e.target.value)}
                   />
                   <div className="flex gap-2">
-                    <button
-                      disabled={busy}
-                      onClick={doApprove}
-                      className="flex-1 px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 disabled:opacity-60"
-                    >
+                    <Button disabled={busy} onClick={doApprove} className="flex-1">
                       Погодити
-                    </button>
-                    <button
-                      disabled={busy}
-                      onClick={doReject}
-                      className="flex-1 px-4 py-2 rounded-lg border border-red-300 text-red-700 text-sm font-medium hover:bg-red-50 disabled:opacity-60"
-                    >
+                    </Button>
+                    <Button variant="danger" disabled={busy} onClick={doReject} className="flex-1">
                       Відхилити
-                    </button>
+                    </Button>
                   </div>
                 </div>
               )}
@@ -655,13 +658,9 @@ export function PaymentModal({ payment, users, companies, forms, onClose, onChan
                     <p className="text-xs text-red-600">Заявку відхилено.</p>
                   )}
                   {isOwner && (
-                    <button
-                      disabled={busy}
-                      onClick={doResubmit}
-                      className="px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
-                    >
+                    <Button variant="outline" disabled={busy} onClick={doResubmit}>
                       Подати знову
-                    </button>
+                    </Button>
                   )}
                 </div>
               )}
@@ -678,78 +677,17 @@ export function PaymentModal({ payment, users, companies, forms, onClose, onChan
 
             {s !== 'rejected' && (
               <>
-                {/* Блок 3 — Розподіл по банках */}
+                {/* Блок 3 — Оплата */}
                 <Block
                   index={3}
-                  title="Розподіл по банках"
+                  title="Оплата"
                   state={b3}
-                  actor={b3 === 'done' ? name(p.allocated_by) : undefined}
-                  at={b3 === 'done' ? formatDateTime(p.allocated_at) : undefined}
+                  actor={b3 === 'done' ? name(p.paid_by) : undefined}
+                  at={b3 === 'done' ? formatDateTime(p.paid_at) : undefined}
                 >
                   {b3 === 'pending' && <p className="text-xs text-gray-400">Стане доступним після погодження заявки.</p>}
-                  {b3 === 'active' && !canPay && (
-                    <p className="text-xs text-gray-400">Очікує розподілу по банках бухгалтером.</p>
-                  )}
 
-                  {editAllocation ? (
-                    <div className="space-y-3">
-                      <div>
-                        <div className="text-xs font-medium text-gray-600 mb-1.5">Розподілити суму по банках</div>
-                        <div className="space-y-2">
-                          {editorBanks.map((b) => (
-                            <div key={b.id} className="flex items-center gap-3">
-                              <div className="flex-1 text-sm text-gray-700">
-                                {b.name}
-                                {!b.is_active && <span className="ml-1 text-[11px] text-gray-400">(неактивний)</span>}
-                              </div>
-                              <input
-                                className="w-36 px-3 py-1.5 border border-gray-300 rounded-lg text-sm text-right tabular-nums focus:outline-none focus:ring-2 focus:ring-brand-500"
-                                inputMode="decimal"
-                                placeholder="0,00"
-                                value={alloc[b.id] ?? ''}
-                                onChange={(e) => setAlloc((a) => ({ ...a, [b.id]: e.target.value }))}
-                              />
-                            </div>
-                          ))}
-                          {editorBanks.length === 0 && (
-                            <div className="text-sm text-gray-400">Немає активних банків. Додайте у «Довідники».</div>
-                          )}
-                        </div>
-                        <div className="flex items-center justify-between mt-3">
-                          <span className={`text-sm font-medium ${allocMatch ? 'text-green-700' : 'text-gray-500'}`}>
-                            Розподілено: <span className="tabular-nums">{formatUAH(allocTotal)}</span> / {formatUAH(p.amount)}
-                          </span>
-                          <button
-                            disabled={busy || !allocMatch}
-                            onClick={doAllocate}
-                            className="px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-medium hover:bg-brand-700 disabled:opacity-50"
-                          >
-                            {s === 'approved' ? 'Зберегти розподіл' : 'Оновити розподіл'}
-                          </button>
-                        </div>
-                      </div>
-                      {editTypes && <div className="border-t border-gray-100 pt-3">{typesEditor}</div>}
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {allocChips}
-                      {editTypes ? <div className="border-t border-gray-100 pt-3">{typesEditor}</div> : typeChips}
-                    </div>
-                  )}
-                </Block>
-
-                {/* Блок 4 — Оплата */}
-                <Block
-                  index={4}
-                  title="Оплата"
-                  state={b4}
-                  actor={b4 === 'done' ? name(p.paid_by) : undefined}
-                  at={b4 === 'done' ? formatDateTime(p.paid_at) : undefined}
-                  last
-                >
-                  {b4 === 'pending' && <p className="text-xs text-gray-400">Стане доступним після розподілу по банках.</p>}
-
-                  {b4 === 'active' && canPay && (
+                  {b3 === 'active' && canPay && (
                     <div className="space-y-2">
                       <p className="text-xs text-gray-500">
                         До оплати: <span className="font-semibold tabular-nums text-gray-800">{formatUAH(p.amount)}</span>
@@ -760,26 +698,22 @@ export function PaymentModal({ payment, users, companies, forms, onClose, onChan
                         <input type="file" multiple className="hidden" onChange={(e) => addPayFiles(e.target.files)} />
                       </label>
                       {pendingFileList(payFiles, (i) => setPayFiles((prev) => prev.filter((_, idx) => idx !== i)))}
-                      <textarea
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none"
+                      <TextArea
+                        className="resize-none"
                         rows={2}
                         placeholder="Деталі оплати (необовʼязково)"
                         value={payNote}
                         onChange={(e) => setPayNote(e.target.value)}
                       />
-                      <button
-                        disabled={busy}
-                        onClick={doPay}
-                        className="w-full px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-medium hover:bg-brand-700 disabled:opacity-50"
-                      >
+                      <Button disabled={busy} onClick={doPay} className="w-full">
                         Провести оплату
-                      </button>
+                      </Button>
                     </div>
                   )}
-                  {b4 === 'active' && !canPay && (
+                  {b3 === 'active' && !canPay && (
                     <p className="text-xs text-gray-400">Очікує проведення оплати бухгалтером.</p>
                   )}
-                  {b4 === 'done' && (
+                  {b3 === 'done' && (
                     <div className="space-y-2">
                       <p className="text-xs text-green-700">Оплату проведено.</p>
                       {paymentComments.length > 0 &&
@@ -794,6 +728,65 @@ export function PaymentModal({ payment, users, companies, forms, onClose, onChan
                           <div className="flex flex-wrap gap-2">{paymentFiles.map(fileButton)}</div>
                         </div>
                       )}
+                    </div>
+                  )}
+                </Block>
+
+                {/* Блок 4 — Розподіл по банках */}
+                <Block
+                  index={4}
+                  title="Розподіл по банках"
+                  state={b4}
+                  actor={b4 === 'done' ? name(p.allocated_by) : undefined}
+                  at={b4 === 'done' ? formatDateTime(p.allocated_at) : undefined}
+                  last
+                >
+                  {b4 === 'pending' && <p className="text-xs text-gray-400">Стане доступним після проведення оплати.</p>}
+                  {b4 === 'active' && !canPay && (
+                    <p className="text-xs text-gray-400">Очікує розподілу по банках бухгалтером.</p>
+                  )}
+
+                  {editAllocation ? (
+                    <div className="space-y-3">
+                      <div>
+                        <div className="text-xs font-medium text-gray-600 mb-1.5">Розподілити суму по банках</div>
+                        <div className="space-y-2">
+                          {editorBanks.map((b) => (
+                            <div key={b.id} className="flex items-center gap-3">
+                              <div className="flex-1 text-sm text-gray-700">
+                                {b.name}
+                                {!b.is_active && <span className="ml-1 text-[11px] text-gray-400">(неактивний)</span>}
+                              </div>
+                              <div className="w-36">
+                                <TextInput
+                                  className="text-right tabular-nums"
+                                  inputMode="decimal"
+                                  placeholder="0,00"
+                                  value={alloc[b.id] ?? ''}
+                                  onChange={(e) => setAlloc((a) => ({ ...a, [b.id]: e.target.value }))}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                          {editorBanks.length === 0 && (
+                            <div className="text-sm text-gray-400">Немає активних банків. Додайте у «Довідники».</div>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between mt-3">
+                          <span className={`text-sm font-medium ${allocMatch ? 'text-green-700' : 'text-gray-500'}`}>
+                            Розподілено: <span className="tabular-nums">{formatUAH(allocTotal)}</span> / {formatUAH(p.amount)}
+                          </span>
+                          <Button disabled={busy || !allocMatch} onClick={doAllocate}>
+                            {s === 'paid' ? 'Зберегти розподіл' : 'Оновити розподіл'}
+                          </Button>
+                        </div>
+                      </div>
+                      {editTypes && <div className="border-t border-gray-100 pt-3">{typesEditor}</div>}
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {allocChips}
+                      {editTypes ? <div className="border-t border-gray-100 pt-3">{typesEditor}</div> : typeChips}
                     </div>
                   )}
                 </Block>

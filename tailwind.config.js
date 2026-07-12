@@ -18,6 +18,20 @@ export default {
           950: '#0A1428',
         },
       },
+      keyframes: {
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        modalIn: {
+          '0%': { opacity: '0', transform: 'scale(.96) translateY(8px)' },
+          '100%': { opacity: '1', transform: 'scale(1) translateY(0)' },
+        },
+      },
+      animation: {
+        fadeIn: 'fadeIn 150ms ease-out',
+        modalIn: 'modalIn 150ms ease-out',
+      },
     },
   },
   plugins: [],

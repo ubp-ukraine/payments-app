@@ -1,5 +1,6 @@
 import { useAuth } from '../contexts/AuthContext';
 import { DirectoryList } from '../components/directories/DirectoryList';
+import { PageHeader } from '../components/ui/PageHeader';
 
 export function Directories() {
   const { profile } = useAuth();
@@ -8,12 +9,14 @@ export function Directories() {
 
   return (
     <div className="max-w-2xl">
-      <h1 className="text-2xl font-bold text-gray-900 mb-1">Довідники</h1>
-      <p className="text-gray-500 text-sm mb-5">
-        {isAdmin
-          ? 'Списки для форми заявки та розбивки оплат.'
-          : 'Підприємства для вибору у формі заявки на оплату.'}
-      </p>
+      <PageHeader
+        title="Довідники"
+        subtitle={
+          isAdmin
+            ? 'Списки для форми заявки та розбивки оплат.'
+            : 'Підприємства для вибору у формі заявки на оплату.'
+        }
+      />
 
       <div className="space-y-5">
         <DirectoryList

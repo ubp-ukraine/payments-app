@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { FileText, Paperclip, Search } from 'lucide-react';
+import { AlertCircle, FileText, Paperclip, Search } from 'lucide-react';
 import { DirectoryRow, Payment, PaymentAttachment } from '../../types/database';
 import { listAllAttachments } from '../../lib/api';
 import { formatUAH } from '../../constants/domain';
+import { Badge } from '../ui/Badge';
+import { InfoBanner } from '../ui/InfoBanner';
+import { TextInput } from '../ui/FormField';
 import { fileKind, useFilePreview, useThumbnails } from './attachments';
 import { FilePreviewOverlay } from './FilePreviewOverlay';
 
@@ -61,16 +64,22 @@ export function PaymentFiles({ payments, companies }: Props) {
   return (
     <div>
       <div className="mb-4 relative max-w-sm">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-        <input
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 z-10" />
+        <TextInput
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Пошук за назвою файлу, заявкою чи № рахунку…"
-          className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+          className="pl-9"
         />
       </div>
 
-      {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm">{error}</div>}
+      {error && (
+        <div className="mb-4">
+          <InfoBanner tone="danger" icon={AlertCircle}>
+            {error}
+          </InfoBanner>
+        </div>
+      )}
 
       {loading ? (
         <div className="text-gray-500">Завантаження...</div>
@@ -84,7 +93,7 @@ export function PaymentFiles({ payments, companies }: Props) {
               <button
                 key={a.id}
                 onClick={() => openFile(a)}
-                className="group text-left bg-white border border-gray-200 rounded-xl overflow-hidden hover:border-brand-300 hover:shadow-sm transition-all flex flex-col"
+                className="group text-left bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:border-brand-300 hover:shadow-md transition-all duration-150 flex flex-col focus:outline-none focus:ring-4 focus:ring-brand-600/20"
               >
                 <div className="aspect-[4/3] bg-gray-50 flex items-center justify-center overflow-hidden">
                   {kind === 'image' && thumbs[a.id] ? (
@@ -95,15 +104,15 @@ export function PaymentFiles({ payments, companies }: Props) {
                     <Paperclip size={26} className="text-gray-300" />
                   )}
                 </div>
-                <div className="p-2.5 min-w-0">
+                <div className="p-2.5 min-w-0 border-t border-gray-100">
                   <div className="text-xs font-medium text-gray-900 truncate">{a.name || 'Файл'}</div>
                   <div className="text-[11px] text-gray-500 truncate mt-0.5">{paymentLabel(a)}</div>
-                  <div className="text-[11px] text-gray-400 mt-1 flex items-center justify-between gap-2">
-                    <span>{fmtDate(a.created_at)}</span>
+                  <div className="text-[11px] text-gray-400 mt-1.5 flex items-center justify-between gap-2">
+                    <span className="tabular-nums">{fmtDate(a.created_at)}</span>
                     {paymentsById[a.payment_id] && (
-                      <span className="tabular-nums font-medium text-gray-500 whitespace-nowrap">
+                      <Badge variant="muted" className="tabular-nums whitespace-nowrap">
                         {formatUAH(paymentsById[a.payment_id].amount)}
-                      </span>
+                      </Badge>
                     )}
                   </div>
                 </div>
